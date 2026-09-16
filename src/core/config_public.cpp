@@ -44,6 +44,7 @@ std::string DefaultIni() {
         << "[Loader]\n"
         << "ShowConsole=" << BoolInt(defaults.showConsole) << "\n"
         << "SafeMode=" << BoolInt(defaults.safeMode) << "\n"
+        << "DumpSymbols=" << BoolInt(defaults.dumpSymbols) << "\n"
         << "InitDelayMs=" << defaults.initDelayMs << "\n"
         << RuntimeSelectionKey() << "=" << defaults.runtime << "\n"
         << "ModsDir=" << defaults.modsDir << "\n";
@@ -78,6 +79,7 @@ void ReadPublicConfig(const std::string &ini, Config &c) {
 
     c.showConsole = GetPrivateProfileIntA(section.c_str(), "ShowConsole", c.showConsole, ini.c_str()) != 0;
     c.safeMode = GetPrivateProfileIntA(section.c_str(), "SafeMode", c.safeMode, ini.c_str()) != 0;
+    c.dumpSymbols = GetPrivateProfileIntA(section.c_str(), "DumpSymbols", c.dumpSymbols, ini.c_str()) != 0;
     c.initDelayMs = GetPrivateProfileIntA(section.c_str(), "InitDelayMs", c.initDelayMs, ini.c_str());
     GetPrivateProfileStringA(section.c_str(), RuntimeSelectionKey(), c.runtime.c_str(), buf, sizeof(buf), ini.c_str());
     c.runtime = buf;

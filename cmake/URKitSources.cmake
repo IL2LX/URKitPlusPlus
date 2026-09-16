@@ -61,6 +61,7 @@ set(URK_CORE_SRC
 set(URK_UNITY_SRC
     ${URK_SRC_DIR}/unity/il2cpp_api.cpp
     ${URK_SRC_DIR}/unity/il2cpp_export_names.cpp
+    ${URK_SRC_DIR}/unity/il2cpp_symbol_map.cpp
     ${URK_SRC_DIR}/unity/mono_api.cpp
 )
 
@@ -227,6 +228,7 @@ set(URK_HEADER_CANDIDATES
     ${URK_SRC_DIR}/unity/mono_api.h
     ${URK_SRC_DIR}/unity/il2cpp_export_policy.h
     ${URK_SRC_DIR}/unity/il2cpp_export_names.h
+    ${URK_SRC_DIR}/unity/il2cpp_symbol_map.h
 
 
     ${URK_SDK_DIR}/mod_sdk.h

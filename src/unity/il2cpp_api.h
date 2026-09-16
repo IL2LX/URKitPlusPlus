@@ -324,6 +324,8 @@ IL2CPP_FN(bool, il2cpp_debug_get_method_info, (const Il2CppMethod *method, Il2Cp
 
 #undef IL2CPP_FN
 
+struct Il2CppSymbolMap;
+
 struct Il2CppApi {
     HMODULE gameAssembly = nullptr;
     HMODULE unityPlayer = nullptr;
@@ -337,6 +339,9 @@ struct Il2CppApi {
     // Defaults to the epoch, which doubles as the "never attempted" sentinel.
     std::chrono::steady_clock::time_point metadataRecoveryLastAttempt{};
     Il2CppDomain *cachedDomain = nullptr;
+    // Optional obfuscated symbol map loaded from <ExeDir>\URKit\symbols.json.
+    // Ownership stays with the loader; the API layer only reads it.
+    const Il2CppSymbolMap *symbolMap = nullptr;
 
 #define M(name) name##_t name = nullptr
     M(il2cpp_init);
@@ -548,3 +553,8 @@ struct Il2CppApi {
 bool Il2Cpp_BindExports(Il2CppApi &api, int timeoutMs = 30000, const Il2CppExportNameMap *exportNames = nullptr);
 bool Il2Cpp_WaitForMetadataReady(Il2CppApi &api, int timeoutMs = 30000, int preDomainDelayMs = 1500);
 const URK_Il2CppApi *ModApi_Il2Cpp(Il2CppApi *api);
+// Dumps every class, method, field and property with their RAW (obfuscated)
+// names to <path> in a tab-separated line format the map-builder tools consume.
+// Must be called after Il2Cpp_WaitForMetadataReady. The symbol map is NOT
+// applied to the dump: it exists to build the map in the first place.
+bool Il2Cpp_DumpSymbolNames(const char *path);

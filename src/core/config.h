@@ -5,6 +5,7 @@
 struct Config {
     bool showConsole = true;
     bool safeMode = false;
+    bool dumpSymbols = false;
     int initDelayMs = 0;
     std::string runtime = "auto";
     std::string modsDir = "Mods";

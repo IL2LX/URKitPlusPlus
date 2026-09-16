@@ -2,6 +2,7 @@
 
 #include "hook_manager.h"
 #include "il2cpp_export_policy.h"
+#include "il2cpp_symbol_map.h"
 #include "unity_name_matching.h"
 #include "logger.h"
 #include "runtime_wait.h"
@@ -12,6 +13,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <initializer_list>
 #include <limits>
 #include <mutex>
@@ -1092,7 +1094,14 @@ const char *Api_ClassName(const void *k) {
     const char *name = k ? InvokeMetadata("il2cpp_class_get_name", g_api->il2cpp_class_get_name,
                                           (Il2CppClass *)const_cast<void *>(k))
                          : nullptr;
-    return name && ValidateMetadataCString(name, "il2cpp_class_get_name") ? name : nullptr;
+    if (!name || !ValidateMetadataCString(name, "il2cpp_class_get_name"))
+        return nullptr;
+    if (g_api->symbolMap) {
+        const char *resolved = Il2Cpp_ResolveClassName(*g_api->symbolMap, name);
+        if (resolved)
+            return resolved;
+    }
+    return name;
 }
 const char *Api_ClassNamespace(const void *k) {
     REQAPI(il2cpp_class_get_namespace, "IL2CPP: il2cpp_class_get_namespace unavailable", nullptr);
@@ -1153,7 +1162,19 @@ const char *Api_MethodName(const void *m) {
     const char *name = m ? InvokeMetadata("il2cpp_method_get_name", g_api->il2cpp_method_get_name,
                                           (const Il2CppMethod *)m)
                          : nullptr;
-    return name && ValidateMetadataCString(name, "il2cpp_method_get_name") ? name : nullptr;
+    if (!name || !ValidateMetadataCString(name, "il2cpp_method_get_name"))
+        return nullptr;
+    if (g_api->symbolMap && g_api->il2cpp_method_get_class && g_api->il2cpp_class_get_name) {
+        Il2CppClass *klass = g_api->il2cpp_method_get_class((const Il2CppMethod *)m);
+        const char *className = klass ? g_api->il2cpp_class_get_name(klass) : nullptr;
+        if (className && ValidateMetadataCString(className, "il2cpp_class_get_name")) {
+            const char *resolved = Il2Cpp_ResolveMemberName(*g_api->symbolMap, Il2CppSymbolKind::Method,
+                                                            className, name);
+            if (resolved)
+                return resolved;
+        }
+    }
+    return name;
 }
 const void *Api_MethodClass(const void *m) {
     REQAPI(il2cpp_method_get_class, "IL2CPP: il2cpp_method_get_class unavailable", nullptr);
@@ -1191,7 +1212,19 @@ const char *Api_FieldName(const void *f) {
     const char *name = f ? InvokeMetadata("il2cpp_field_get_name", g_api->il2cpp_field_get_name,
                                           (Il2CppClassField *)const_cast<void *>(f))
                          : nullptr;
-    return name && ValidateMetadataCString(name, "il2cpp_field_get_name") ? name : nullptr;
+    if (!name || !ValidateMetadataCString(name, "il2cpp_field_get_name"))
+        return nullptr;
+    if (g_api->symbolMap && g_api->il2cpp_field_get_parent && g_api->il2cpp_class_get_name) {
+        Il2CppClass *klass = g_api->il2cpp_field_get_parent((Il2CppClassField *)const_cast<void *>(f));
+        const char *className = klass ? g_api->il2cpp_class_get_name(klass) : nullptr;
+        if (className && ValidateMetadataCString(className, "il2cpp_class_get_name")) {
+            const char *resolved = Il2Cpp_ResolveMemberName(*g_api->symbolMap, Il2CppSymbolKind::Field,
+                                                            className, name);
+            if (resolved)
+                return resolved;
+        }
+    }
+    return name;
 }
 const void *Api_FieldType(const void *f) {
     REQAPI(il2cpp_field_get_type, "IL2CPP: il2cpp_field_get_type unavailable", nullptr);
@@ -1226,7 +1259,20 @@ int Api_FieldStaticSet(const void *f, void *v) {
 const char *Api_PropertyName(const void *p) {
     REQAPI(il2cpp_property_get_name, "IL2CPP: il2cpp_property_get_name unavailable", nullptr);
     ATTACHAPI(nullptr);
-    return p ? g_api->il2cpp_property_get_name((Il2CppProperty *)const_cast<void *>(p)) : nullptr;
+    const char *name = p ? g_api->il2cpp_property_get_name((Il2CppProperty *)const_cast<void *>(p)) : nullptr;
+    if (!name || !ValidateMetadataCString(name, "il2cpp_property_get_name"))
+        return nullptr;
+    if (g_api->symbolMap && g_api->il2cpp_property_get_parent && g_api->il2cpp_class_get_name) {
+        Il2CppClass *klass = g_api->il2cpp_property_get_parent((Il2CppProperty *)const_cast<void *>(p));
+        const char *className = klass ? g_api->il2cpp_class_get_name(klass) : nullptr;
+        if (className && ValidateMetadataCString(className, "il2cpp_class_get_name")) {
+            const char *resolved = Il2Cpp_ResolveMemberName(*g_api->symbolMap, Il2CppSymbolKind::Property,
+                                                            className, name);
+            if (resolved)
+                return resolved;
+        }
+    }
+    return name;
 }
 const void *Api_PropertyGet(const void *p) {
     REQAPI(il2cpp_property_get_get_method, "IL2CPP: il2cpp_property_get_get_method unavailable", nullptr);
@@ -3578,4 +3624,115 @@ const URK_Il2CppApi *ModApi_Il2Cpp(Il2CppApi *api) {
         return nullptr;
     }
     return &g_publicApi;
+}
+
+bool Il2Cpp_DumpSymbolNames(const char *path) {
+    if (!g_api || !g_api->MetadataAccessReady()) {
+        SetError("IL2CPP: metadata not ready during symbol dump");
+        return false;
+    }
+    Il2CppThreadScope attach(*g_api);
+    if (!attach.ok())
+        return false;
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (!out.is_open())
+        return false;
+    out << "IL2CPP-DUMP-1\tEncoding:UTF-8\tBeebyte cipher:23x\u00cc-\u00cf\n";
+    size_t assemblyCount = 0;
+    if (!InvokeMetadata("il2cpp_domain_get_assemblies for symbol dump", g_api->il2cpp_domain_get_assemblies,
+                        g_api->Domain(), &assemblyCount) ||
+        !assemblyCount) {
+        return false;
+    }
+    const Il2CppAssembly **assemblies = g_api->il2cpp_domain_get_assemblies
+                                            ? InvokeMetadata("il2cpp_domain_get_assemblies for symbol dump",
+                                                             g_api->il2cpp_domain_get_assemblies, g_api->Domain(),
+                                                             &assemblyCount)
+                                            : nullptr;
+    if (!assemblies)
+        return false;
+    for (size_t ai = 0; ai < assemblyCount; ++ai) {
+        const Il2CppImage *image =
+            assemblies[ai] ? InvokeMetadata("il2cpp_assembly_get_image for symbol dump",
+                                            g_api->il2cpp_assembly_get_image, assemblies[ai])
+                           : nullptr;
+        const char *imageName = image ? InvokeMetadata("il2cpp_image_get_name for symbol dump",
+                                                       g_api->il2cpp_image_get_name, image)
+                                      : nullptr;
+        if (!imageName || !ValidateMetadataCString(imageName, "il2cpp_image_get_name"))
+            imageName = "<unknown>";
+        const size_t classCount =
+            image ? InvokeMetadata("il2cpp_image_get_class_count for symbol dump",
+                                   g_api->il2cpp_image_get_class_count, image)
+                  : 0;
+        for (size_t ci = 0; ci < classCount; ++ci) {
+            Il2CppClass *klass =
+                InvokeMetadata("il2cpp_image_get_class for symbol dump", g_api->il2cpp_image_get_class, image, ci);
+            if (!klass)
+                continue;
+            const char *className =
+                InvokeMetadata("il2cpp_class_get_name for symbol dump", g_api->il2cpp_class_get_name, klass);
+            const char *ns = InvokeMetadata("il2cpp_class_get_namespace for symbol dump",
+                                            g_api->il2cpp_class_get_namespace, klass);
+            if (!className || !ValidateMetadataCString(className, "il2cpp_class_get_name"))
+                continue;
+            if (ns)
+                ValidateMetadataCString(ns, "il2cpp_class_get_namespace");
+            out << "C\t" << imageName << '\t' << (ns ? ns : "") << '\t' << className << '\n';
+            void *miter = nullptr;
+            while (const Il2CppMethod *method =
+                       InvokeMetadata("il2cpp_class_get_methods for symbol dump", g_api->il2cpp_class_get_methods,
+                                      klass, &miter)) {
+                const char *mn = InvokeMetadata("il2cpp_method_get_name for symbol dump",
+                                                g_api->il2cpp_method_get_name, method);
+                if (mn && ValidateMetadataCString(mn, "il2cpp_method_get_name"))
+                    out << "M\t" << mn << '\n';
+            }
+            void *fiter = nullptr;
+            while (Il2CppClassField *field =
+                       InvokeMetadata("il2cpp_class_get_fields for symbol dump", g_api->il2cpp_class_get_fields,
+                                      klass, &fiter)) {
+                const char *fn = InvokeMetadata("il2cpp_field_get_name for symbol dump",
+                                                g_api->il2cpp_field_get_name, field);
+                if (fn && ValidateMetadataCString(fn, "il2cpp_field_get_name"))
+                    out << "F\t" << fn << '\n';
+            }
+            void *piter = nullptr;
+            while (Il2CppProperty *prop =
+                       InvokeMetadata("il2cpp_class_get_properties for symbol dump",
+                                      g_api->il2cpp_class_get_properties, klass, &piter)) {
+                const char *pn = InvokeMetadata("il2cpp_property_get_name for symbol dump",
+                                                g_api->il2cpp_property_get_name, prop);
+                if (!pn || !ValidateMetadataCString(pn, "il2cpp_property_get_name"))
+                    continue;
+                const char *getterName = "";
+                const char *setterName = "";
+                if (g_api->il2cpp_property_get_get_method && g_api->il2cpp_method_get_name) {
+                    const Il2CppMethod *getter = InvokeMetadata(
+                        "il2cpp_property_get_get_method for symbol dump", g_api->il2cpp_property_get_get_method, prop);
+                    if (getter) {
+                        const char *gn =
+                            InvokeMetadata("il2cpp_method_get_name for symbol dump", g_api->il2cpp_method_get_name,
+                                           getter);
+                        if (gn && ValidateMetadataCString(gn, "il2cpp_method_get_name"))
+                            getterName = gn;
+                    }
+                }
+                if (g_api->il2cpp_property_get_set_method && g_api->il2cpp_method_get_name) {
+                    const Il2CppMethod *setter = InvokeMetadata(
+                        "il2cpp_property_get_set_method for symbol dump", g_api->il2cpp_property_get_set_method, prop);
+                    if (setter) {
+                        const char *sn =
+                            InvokeMetadata("il2cpp_method_get_name for symbol dump", g_api->il2cpp_method_get_name,
+                                           setter);
+                        if (sn && ValidateMetadataCString(sn, "il2cpp_method_get_name"))
+                            setterName = sn;
+                    }
+                }
+                out << "P\t" << pn << '\t' << getterName << '\t' << setterName << '\n';
+            }
+        }
+    }
+    Log("[IL2CPP] Wrote symbol dump to %s.", path);
+    return true;
 }

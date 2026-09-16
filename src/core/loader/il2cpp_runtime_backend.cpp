@@ -2,6 +2,7 @@
 
 #include "il2cpp_api.h"
 #include "il2cpp_export_names.h"
+#include "il2cpp_symbol_map.h"
 #include "loader_paths.h"
 #include "logger.h"
 #include "mod_context.h"
@@ -21,12 +22,20 @@ constexpr int kIl2CppPreDomainSettleMs = 1500;
 
 RuntimeState g_il2cppState{"IL2CPP"};
 Il2CppApi g_il2cppApi{};
+Il2CppSymbolMap g_symbolMap{};
 
 std::string ExportMapPath() {
     const std::string directory = Loader_UrKitDir();
     if (directory.empty())
         return {};
     return (std::filesystem::path(directory) / "exports.txt").string();
+}
+
+std::string SymbolMapPath() {
+    const std::string directory = Loader_UrKitDir();
+    if (directory.empty())
+        return {};
+    return (std::filesystem::path(directory) / "symbols.json").string();
 }
 
 bool RunIl2Cpp(Config &config) {
@@ -57,6 +66,20 @@ bool RunIl2Cpp(Config &config) {
         return false;
     }
 
+    g_symbolMap = {};
+    const std::string symbolPath = SymbolMapPath();
+    if (!symbolPath.empty() && Il2Cpp_LoadSymbolMap(symbolPath.c_str(), g_symbolMap)) {
+        g_il2cppApi.symbolMap = &g_symbolMap;
+        Log("[IL2CPP] Loaded %zu obfuscated class records from %s (skipped %zu "
+            "malformed entries); class/member names with a mapping are now "
+            "deobfuscated.",
+            g_symbolMap.classes.size(), symbolPath.c_str(), g_symbolMap.invalidEntries);
+    } else if (!symbolPath.empty()) {
+        Log("[IL2CPP] No usable symbol map at %s; obfuscated class/member names are "
+            "reported unchanged.",
+            symbolPath.c_str());
+    }
+
     g_il2cppState.Transition(RuntimeReadiness::ModuleSeen, nullptr, "GameAssembly");
     g_il2cppState.Transition(RuntimeReadiness::ExportsResolved, nullptr, "GameAssembly exports");
 
@@ -67,6 +90,17 @@ bool RunIl2Cpp(Config &config) {
 
     if (!Il2Cpp_WaitForMetadataReady(g_il2cppApi, kRuntimeTimeoutMs, kIl2CppPreDomainSettleMs)) {
         return false;
+    }
+
+    if (config.dumpSymbols) {
+        const std::string dumpPath = SymbolMapPath() + ".dump";
+        if (Il2Cpp_DumpSymbolNames(dumpPath.c_str())) {
+            Log("[IL2CPP] Symbol dump written to %s; disable DumpSymbols=1 in "
+                "URKit_config.ini once the map exists.",
+                dumpPath.c_str());
+            return true;
+        }
+        Log("[IL2CPP][WARNING] Symbol dump requested but failed to write.");
     }
 
     if (config.safeMode) {

@@ -1,0 +1,30 @@
+{
+  "assemblies": [
+    {
+      "name": "Assembly-CSharp.dll",
+      "classes": [
+        {
+          "obfuscated": "GameManager",
+          "name": "PlayerManager",
+          "namespace": "Assembly-CSharp",
+          "methods": {
+            "DinAodNqkeq": "Update",
+            "HhdLMaopMj": "Start",
+            "ZxFmQskdOes": "OnAvatarChanged"
+          },
+          "fields": {
+            "XuEcQocQjm": "isConnected",
+            "OlyHmZxlAe": "sessionId",
+            "RwOncbMvT": "grounded"
+          },
+          "properties": {
+            "KdzAqlBxyq": "IsGrounded"
+          },
+          "events": {
+            "BcmOupwZhb": "OnReceivedData"
+          }
+        }
+      ]
+    }
+  ]
+}
