@@ -167,6 +167,7 @@ void Log_Init(bool showConsole, const std::string &logDirectory) {
 
 void Log_Banner() {
     static const char *lines[] = {
+        R"(----------------------------------------------------------------------)",
         R"( mm    mm  mmmmmm    mm   mmm     ##                                  )",
         R"( ##    ##  ##""""##  ##  ##"      ""       ##                         )",
         R"( ##    ##  ##    ##  ##m##      ####     #######      ##        ##    )",
@@ -174,6 +175,7 @@ void Log_Banner() {
         R"( ##    ##  ##  "##m  ##  ##m      ##       ##      """##"""  """##""" )",
         R"( "##mm##"  ##    ##  ##   ##m  mmm##mmm    ##mmm      ##        ##    )",
         R"(   """"    ""    """ ""    ""  """"""""     """"                      )",
+        R"(Made By Jadis0x -------------------------------------- Modified by IL2)",
     };
     constexpr WORD kBannerColor = FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
 

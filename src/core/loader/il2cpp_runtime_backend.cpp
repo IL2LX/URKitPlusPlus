@@ -36,21 +36,20 @@ bool RunIl2Cpp(Config &config) {
     Log(">> IL2CPP backend");
     Il2CppExportNameMap exportNameMap;
     const Il2CppExportNameMap *exportNames = nullptr;
-    if (Loader_IsVRChat()) {
-        Log("[IL2CPP][VRChat] VRChat detected, attempting to load an export-name map "
-            "from %sURKit\\exports.txt.",
-            Loader_ExeDir().c_str());
+    {
         const std::string mapPath = ExportMapPath();
-        if (Il2Cpp_LoadExportNameMap(mapPath.c_str(), exportNameMap)) {
-            Log("[IL2CPP][VRChat] Loaded %zu export-name mappings from %s (skipped "
-                "%zu malformed lines).",
-                exportNameMap.realToObfuscated.size(), mapPath.c_str(), exportNameMap.invalidLines);
-            exportNames = &exportNameMap;
-        } else {
-            Log("[IL2CPP][VRChat][WARNING] No usable export map at %s; GameAssembly "
-                "export names will be resolved by exact name (this fails when "
-                "obfuscation is active).",
-                mapPath.c_str());
+        if (!mapPath.empty()) {
+            Log("[IL2CPP] Attempting to load an export-name map from %s.", mapPath.c_str());
+            if (Il2Cpp_LoadExportNameMap(mapPath.c_str(), exportNameMap)) {
+                Log("[IL2CPP] Loaded %zu export-name mappings from %s (skipped "
+                    "%zu malformed lines).",
+                    exportNameMap.realToObfuscated.size(), mapPath.c_str(), exportNameMap.invalidLines);
+                exportNames = &exportNameMap;
+            } else {
+                Log("[IL2CPP][WARNING] No usable export map at %s; GameAssembly "
+                    "export names will be resolved by exact name.",
+                    mapPath.c_str());
+            }
         }
     }
 
