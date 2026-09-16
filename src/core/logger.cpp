@@ -165,6 +165,36 @@ void Log_Init(bool showConsole, const std::string &logDirectory) {
     }
 }
 
+void Log_Banner() {
+    static const char *lines[] = {
+        R"( mm    mm  mmmmmm    mm   mmm     ##                                  )",
+        R"( ##    ##  ##""""##  ##  ##"      ""       ##                         )",
+        R"( ##    ##  ##    ##  ##m##      ####     #######      ##        ##    )",
+        R"( ##    ##  #######   #####        ##       ##      mmm##mmm  mmm##mmm )",
+        R"( ##    ##  ##  "##m  ##  ##m      ##       ##      """##"""  """##""" )",
+        R"( "##mm##"  ##    ##  ##   ##m  mmm##mmm    ##mmm      ##        ##    )",
+        R"(   """"    ""    """ ""    ""  """"""""     """"                      )",
+    };
+    constexpr WORD kBannerColor = FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+
+    std::lock_guard<std::mutex> lock(g_logMutex);
+    for (const char *line : lines) {
+        if (g_console) {
+            SetConsoleAttributes(kBannerColor);
+            fputs(line, stdout);
+            fputc('\n', stdout);
+            SetConsoleAttributes(g_consoleDefaultAttributes);
+            fflush(stdout);
+        }
+        if (g_file) {
+            fputs(line, g_file);
+            fputc('\n', g_file);
+        }
+        OutputDebugStringA(line);
+        OutputDebugStringA("\n");
+    }
+}
+
 void Log_Shutdown() {
     std::lock_guard<std::mutex> lock(g_logMutex);
     if (g_file) {

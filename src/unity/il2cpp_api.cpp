@@ -384,6 +384,8 @@ struct BoundExport {
 
 class StrictIl2CppExportResolver {
   public:
+    void SetExportNames(const Il2CppExportNameMap *map) { exportNames_ = map; }
+
     bool Initialize(HMODULE module) {
         module_ = module;
         exports_.clear();
@@ -504,24 +506,57 @@ class StrictIl2CppExportResolver {
     }
 
     FARPROC BindExact(const char *name, ExportAbiSignature abi, Il2CppExportRequirement requirement, bool &ok) {
-        const auto found = exports_.find(name ? name : "");
+        // VRChat renames the il2cpp_* exports before shipping GameAssembly.dll.
+        // When a map loaded from a UnityPlayer-Dumper dump is available, look the
+        // real API name up first and resolve through the obfuscated spelling.
+        // Fall back to the exact name when that mapped export is absent so a
+        // stale or partially-obfuscated dump cannot block resolution.
+        const std::string *mappedName = nullptr;
+        if (exportNames_ && name) {
+            const auto mapped = exportNames_->realToObfuscated.find(name);
+            if (mapped != exportNames_->realToObfuscated.end())
+                mappedName = &mapped->second;
+        }
+        std::string mappedStorage;
+        const char *lookupName = name;
+        if (mappedName) {
+            mappedStorage = *mappedName;
+            lookupName = mappedStorage.c_str();
+        }
+        auto found = exports_.find(lookupName ? lookupName : "");
+        if (found == exports_.end() && mappedName) {
+            Log("[IL2CPP][EXPORT] Export name map entry %s => %s is not present in "
+                "GameAssembly; retrying with the exact name.",
+                name ? name : "<null>", mappedName->c_str());
+            lookupName = name;
+            found = exports_.find(lookupName ? lookupName : "");
+        }
+        if (mappedName && found != exports_.end())
+            Log("[IL2CPP][EXPORT] Resolving %s through the export-name map as '%s'.", name ? name : "<null>",
+                mappedName->c_str());
+
         if (found == exports_.end()) {
             const Il2CppExportBindingDecision decision =
                 Il2CppExportPolicy_Decide(requirement, false, false);
             if (decision.failStartup) {
                 ok = false;
-                Log("[IL2CPP][ERROR] Required exact export GameAssembly.dll!%s is missing; no fallback will be used.",
-                    name ? name : "<null>");
+                Log(mappedName
+                        ? "[IL2CPP][ERROR] Required export GameAssembly.dll!%s (mapped to '%s') is missing; no "
+                          "fallback will be used."
+                        : "[IL2CPP][ERROR] Required exact export GameAssembly.dll!%s is missing; no fallback will be used.",
+                    name ? name : "<null>", mappedName ? mappedName->c_str() : "");
             } else {
-                Log("[IL2CPP][EXPORT] Optional exact export GameAssembly.dll!%s is not present.",
-                    name ? name : "<null>");
+                Log(mappedName
+                        ? "[IL2CPP][EXPORT] Optional export GameAssembly.dll!%s (mapped to '%s') is not present."
+                        : "[IL2CPP][EXPORT] Optional exact export GameAssembly.dll!%s is not present.",
+                    name ? name : "<null>", mappedName ? mappedName->c_str() : "");
                 ++optionalUnavailable_;
             }
             return nullptr;
         }
 
         const PeExportRecord &record = found->second;
-        const FARPROC win32Address = GetProcAddress(module_, name);
+        const FARPROC win32Address = GetProcAddress(module_, lookupName);
         if (win32Address != record.address) {
             const Il2CppExportBindingDecision decision =
                 Il2CppExportPolicy_Decide(requirement, true, false);
@@ -530,11 +565,12 @@ class StrictIl2CppExportResolver {
             else
                 ++optionalUnavailable_;
             Log(decision.failStartup
-                    ? "[IL2CPP][ERROR] Exact export mismatch for %s: PE=%p (RVA=0x%08lX ordinal=%hu) "
+                    ? "[IL2CPP][ERROR] Exact export mismatch for %s%s: PE=%p (RVA=0x%08lX ordinal=%hu) "
                       "GetProcAddress=%p."
-                    : "[IL2CPP][WARNING] Optional exact export mismatch for %s: PE=%p "
+                    : "[IL2CPP][WARNING] Optional exact export mismatch for %s%s: PE=%p "
                       "(RVA=0x%08lX ordinal=%hu) GetProcAddress=%p; capability disabled.",
-                name, reinterpret_cast<void *>(record.address), static_cast<unsigned long>(record.rva), record.ordinal,
+                name ? name : "<null>", mappedName ? " (obfuscated)" : "",
+                reinterpret_cast<void *>(record.address), static_cast<unsigned long>(record.rva), record.ordinal,
                 reinterpret_cast<void *>(win32Address));
             return nullptr;
         }
@@ -613,6 +649,7 @@ class StrictIl2CppExportResolver {
     DWORD exportSize_ = 0;
     std::unordered_map<std::string, PeExportRecord> exports_;
     std::unordered_map<uintptr_t, BoundExport> assigned_;
+    const Il2CppExportNameMap *exportNames_ = nullptr;
     std::string failure_;
     size_t optionalUnavailable_ = 0;
     size_t sharedExactTargets_ = 0;
@@ -3204,13 +3241,26 @@ bool Il2CppApi::TryAssemblyCount(size_t &count) const {
     return assemblies != nullptr;
 }
 
-bool Il2Cpp_BindExports(Il2CppApi &api, int timeoutMs) {
+bool Il2Cpp_BindExports(Il2CppApi &api, int timeoutMs, const Il2CppExportNameMap *exportNames) {
     api = {};
-    constexpr std::array candidates{RuntimeModuleCandidate{"GameAssembly.dll", "il2cpp_domain_get"}};
+    // VRChat logic lives entirely behind an optional map: every other game keeps
+    // resolving the readiness export and all exact il2cpp_* names directly.
+    std::string readinessExport = "il2cpp_domain_get";
+    if (exportNames) {
+        const auto mapped = exportNames->realToObfuscated.find(readinessExport);
+        if (mapped != exportNames->realToObfuscated.end()) {
+            readinessExport = mapped->second;
+            Log("[IL2CPP][EXPORT] Using mapped readiness export il2cpp_domain_get ('%s') for runtime discovery.",
+                mapped->second.c_str());
+        }
+    }
+    const std::array<RuntimeModuleCandidate, 1> candidates{
+        RuntimeModuleCandidate{"GameAssembly.dll", readinessExport}};
     RuntimeModule module = WaitForRuntime("IL2CPP", candidates, std::chrono::milliseconds(timeoutMs));
     if (!module.handle) {
-        Log("[IL2CPP][ERROR] GameAssembly.dll with il2cpp_domain_get was not "
-            "discovered.");
+        Log("[IL2CPP][ERROR] GameAssembly.dll with export %s was not "
+            "discovered.",
+            readinessExport.c_str());
         return false;
     }
     api.gameAssembly = module.handle;
@@ -3229,6 +3279,8 @@ bool Il2Cpp_BindExports(Il2CppApi &api, int timeoutMs) {
         Log("[IL2CPP][ERROR] %s. Native mods will not start.", g_lastError.c_str());
         return false;
     }
+    if (exportNames)
+        resolver.SetExportNames(exportNames);
 
     bool ok = true;
 #define BIND(name)                                                                                                    \

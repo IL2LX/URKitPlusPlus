@@ -417,7 +417,7 @@ function(add_urk_proxy target output proxy_source definition_file)
         PREFIX ""
     )
 
-    target_link_libraries(${target} PRIVATE detours crypt32 gdiplus ole32 version comdlg32 shell32)
+    target_link_libraries(${target} PRIVATE detours crypt32 ole32 version comdlg32 shell32)
     if (URK_WITH_CURL)
         target_link_libraries(${target} PRIVATE ${URK_CURL_TARGET})
     endif()
@@ -462,7 +462,7 @@ function(add_urk_injected_loader target output)
         PREFIX ""
     )
 
-    target_link_libraries(${target} PRIVATE detours crypt32 gdiplus ole32 version comdlg32 shell32)
+    target_link_libraries(${target} PRIVATE detours crypt32 ole32 version comdlg32 shell32)
     target_compile_definitions(${target} PRIVATE URK_INJECTED_LOADER=1)
     if (URK_WITH_CURL)
         target_link_libraries(${target} PRIVATE ${URK_CURL_TARGET})

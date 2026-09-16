@@ -16,7 +16,6 @@ set(URK_INCLUDE_DIRS
     ${URK_SRC_DIR}/core
     ${URK_SRC_DIR}/core/loader
     ${URK_SRC_DIR}/unity
-    ${URK_SRC_DIR}/ui
     ${URK_SRC_DIR}/sdk
     ${URK_SRC_DIR}/proxy
     ${URK_SDK_DIR}
@@ -61,11 +60,8 @@ set(URK_CORE_SRC
 
 set(URK_UNITY_SRC
     ${URK_SRC_DIR}/unity/il2cpp_api.cpp
+    ${URK_SRC_DIR}/unity/il2cpp_export_names.cpp
     ${URK_SRC_DIR}/unity/mono_api.cpp
-)
-
-set(URK_UI_SRC
-    ${URK_SRC_DIR}/ui/intro.cpp
 )
 
 set(URK_SDK_GENERATOR_SRC
@@ -176,7 +172,6 @@ list(APPEND URK_UPDATER_SRC ${URK_SDK_TEMPLATE_FILES})
 set(URK_COMMON_SRC
     ${URK_CORE_SRC}
     ${URK_UNITY_SRC}
-    ${URK_UI_SRC}
 )
 
 set(URK_VERSION_PROXY_SRC ${URK_SRC_DIR}/proxy/version_proxy.cpp)
@@ -231,6 +226,7 @@ set(URK_HEADER_CANDIDATES
 
     ${URK_SRC_DIR}/unity/mono_api.h
     ${URK_SRC_DIR}/unity/il2cpp_export_policy.h
+    ${URK_SRC_DIR}/unity/il2cpp_export_names.h
 
 
     ${URK_SDK_DIR}/mod_sdk.h

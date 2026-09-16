@@ -1,6 +1,5 @@
 #include "loader.h"
 #include "config.h"
-#include "intro.h"
 #include "loader/loader_selection.h"
 #include "loader/loader_lifecycle.h"
 #include "loader/loader_paths.h"
@@ -27,17 +26,7 @@ static_assert(offsetof(URK_ModContext, network) > offsetof(URK_ModContext, gameA
 static Config g_cfg;
 
 namespace {
-constexpr DWORD kIntroFinalHoldMs = 900;
 constexpr unsigned kProcessQualificationTimeoutMs = 30000;
-constexpr float kIntroPreparing = 0.04f;
-constexpr float kIntroConfigLoaded = 0.10f;
-constexpr float kIntroLogReady = 0.14f;
-constexpr float kIntroBackendSelected = 0.18f;
-constexpr float kIntroComplete = 1.0f;
-
-void IntroStage(float value, const char *status) {
-    Intro::Progress(value, status ? std::string(status) : std::string());
-}
 
 void LogConfigSummary(const RuntimeBackendDescriptor &backend) {
     Log("=== URKit started (safeMode=%s, runtime=%s) ===", g_cfg.safeMode ? "on" : "off", backend.name);
@@ -50,18 +39,6 @@ void DebugSkip(const std::string &reason) {
     const std::string message = "[URKit][loader] bootstrap skipped: " + reason + "\n";
     OutputDebugStringA(message.c_str());
 }
-
-class IntroSession {
-  public:
-    void MarkShown() { shown_ = true; }
-    ~IntroSession() {
-        if (shown_)
-            Intro::Close();
-    }
-
-  private:
-    bool shown_ = false;
-};
 } // namespace
 
 LoaderRunStatus Loader_Run(LoaderStartMode mode) {
@@ -89,13 +66,8 @@ LoaderRunStatus Loader_Run(LoaderStartMode mode) {
                                           ? std::filesystem::path(g_cfg.configPath).parent_path().string()
                                           : std::string();
     Log_Init(g_cfg.showConsole, logDirectory);
+    Log_Banner();
     const RuntimeBackendDescriptor &backend = RuntimeBackend_Select(g_cfg);
-
-    IntroSession introSession;
-    Intro::Show("URKit", "Preparing runtime and mods", Loader_GameName(), backend.name, 45, 125, 245, 0);
-    introSession.MarkShown();
-    IntroStage(kIntroPreparing, "Preparing runtime and mods");
-    IntroStage(kIntroConfigLoaded, "Config loaded");
 
     for (const std::string &warning : g_cfg.warnings)
         Log("[config][WARNING] %s", warning.c_str());
@@ -103,18 +75,9 @@ LoaderRunStatus Loader_Run(LoaderStartMode mode) {
         qualification.unityPlayerLoaded ? "loaded" : "not-loaded",
         qualification.il2cppLoaded ? "loaded" : "not-loaded", qualification.monoLoaded ? "loaded" : "not-loaded");
     LogConfigSummary(backend);
-    IntroStage(kIntroLogReady, "Runtime log ready");
 
-    Intro::Backend(backend.name);
-    IntroStage(kIntroBackendSelected, backend.implemented ? "Runtime backend selected" : "Runtime backend reserved");
     const bool backendReady = RuntimeBackend_Run(backend, g_cfg);
 
-    Intro::Progress(kIntroComplete);
-    HANDLE stopEvent = LoaderLifecycle_StopEvent();
-    if (stopEvent)
-        WaitForSingleObject(stopEvent, kIntroFinalHoldMs);
-    else
-        Sleep(kIntroFinalHoldMs);
     if (backendReady) {
         Log("=== Loader initialization succeeded ===");
         return LoaderRunStatus::Succeeded;

@@ -1,6 +1,5 @@
 #include "native_mod_loader.h"
 #include "callback_guard.h"
-#include "intro.h"
 #include "loader_paths.h"
 #include "logger.h"
 #include "mod_lifecycle_intercept.h"
@@ -251,11 +250,6 @@ struct ModLoadStats {
     int loaded = 0;
     int failed = 0;
 };
-
-void PublishModProgress(const std::string &modName, const ModLoadStats &totals, bool loading,
-                        const std::string &finalStatus = std::string()) {
-    Intro::ModProgress(modName, totals.discovered, totals.loaded, totals.failed, loading, finalStatus);
-}
 } // namespace
 
 NativeModLoadPlan NativeMods_Discover(const Config &config) {
@@ -270,8 +264,6 @@ NativeModLoadPlan NativeMods_Discover(const Config &config) {
     }
 
     if (plan.Empty()) {
-        const ModLoadStats totals;
-        PublishModProgress("", totals, false, "No native mods found");
         Log("[SUCCESS][mods] 0 loaded, 0 failed, 0 discovered; runtime event hooks were not installed.");
     }
     return plan;
@@ -284,8 +276,6 @@ void NativeMods_Load(const NativeModLoadPlan &plan, const URK_ModContext &contex
         return;
 
     for (const auto &path : plan.paths) {
-        const std::string filename = std::filesystem::path(path).filename().string();
-        PublishModProgress(filename, totals, true);
         SetLastError(ERROR_SUCCESS);
         HMODULE h = LoadLibraryExA(path.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
         if (!h) {
@@ -300,7 +290,6 @@ void NativeMods_Load(const NativeModLoadPlan &plan, const URK_ModContext &contex
                 LogImportedDllDiagnostics(path);
             }
             ++totals.failed;
-            PublishModProgress(filename, totals, true);
             continue;
         }
         PublishModInfo(h, path);
@@ -312,7 +301,6 @@ void NativeMods_Load(const NativeModLoadPlan &plan, const URK_ModContext &contex
                 "ModInitEx(const URK_ModContext* ctx).");
             FreeLibrary(h);
             ++totals.failed;
-            PublishModProgress(filename, totals, true);
             continue;
         }
         DWORD exceptionCode = 0;
@@ -338,12 +326,7 @@ void NativeMods_Load(const NativeModLoadPlan &plan, const URK_ModContext &contex
             FreeLibrary(h);
             ++totals.failed;
         }
-        PublishModProgress(filename, totals, true);
     }
-    const std::string finalStatus =
-        totals.failed == 0 ? "All mods loaded"
-                           : (totals.loaded > 0 ? "Mod loading completed with errors" : "Mod loading failed");
-    PublishModProgress("", totals, false, finalStatus);
     Log(totals.failed == 0 ? "[SUCCESS][mods] %d loaded, %d failed, %zu discovered"
                            : "[WARNING][mods] %d loaded, %d failed, %zu discovered",
         totals.loaded, totals.failed,

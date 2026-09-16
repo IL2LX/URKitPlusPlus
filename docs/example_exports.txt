@@ -1,0 +1,25 @@
+# URKit il2cpp export map - example
+#
+# Put the full dump in URKit\exports.txt next to the game executable.
+# Format:  [export index] obfuscated name = real il2cpp name
+# Lines that don't start with '[' (headers, comments) and blank lines are ignored.
+#
+# These 12 entries are the REQUIRED exports URKit must bind to start an IL2CPP
+# backend; the real dump contains every il2cpp_* export (200+ lines).
+
+[75] DuDMxJtsjXI = il2cpp_domain_get
+[77] usn_wODIDSV = il2cpp_domain_get_assemblies
+[24] dVRfHbSOZgu = il2cpp_assembly_get_image
+[207] kbpralnJKsJ = il2cpp_image_get_name
+[34] YLYTLCLeytw = il2cpp_class_from_name
+[44] IlDxeJCLSbo = il2cpp_class_get_methods
+[136] yhPAwNkypFh = il2cpp_method_get_name
+[142] pQzdBUTzQXT = il2cpp_method_get_param_count
+[143] ilvEjsIRiiC = il2cpp_method_get_param
+[198] wUfrFIAhzjI = il2cpp_type_get_name
+[43] AKYvZrsgFxf = il2cpp_class_get_field_from_name
+[88] DCMvdQoLobz = il2cpp_field_get_offset
+
+# Example of the optional lifecycle exports (same format):
+[0] FPSHifuDkOi = il2cpp_init
+[2] eXNYCVZufzd = il2cpp_shutdown

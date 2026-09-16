@@ -16,7 +16,6 @@ and export definition differ.
 | `src/core/loader/` | Runtime backends, mod loading, events, paths, and Steam identity. |
 | `src/core/` | Configuration, logging, hooks, lifecycle, networking, and shared state. |
 | `src/unity/` | Mono and IL2CPP export/metadata adapters. |
-| `src/ui/` | Loader splash UI. |
 | `src/tools/sdk_tool/` | `urk-sdk.exe` command-line and Win32 UI. |
 | `src/sdk/` | SDK/project writers and output validation. |
 | `src/sdk/templates/` | Generated runtime, Unity, and optional UI source. |

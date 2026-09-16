@@ -1,5 +1,6 @@
 #pragma once
 
+#include "il2cpp_export_names.h"
 #include "mod_sdk.h"
 
 #include <windows.h>
@@ -544,6 +545,6 @@ struct Il2CppApi {
     Il2CppClassField *FindField(Il2CppClass *klass, const char *name) const;
 };
 
-bool Il2Cpp_BindExports(Il2CppApi &api, int timeoutMs = 30000);
+bool Il2Cpp_BindExports(Il2CppApi &api, int timeoutMs = 30000, const Il2CppExportNameMap *exportNames = nullptr);
 bool Il2Cpp_WaitForMetadataReady(Il2CppApi &api, int timeoutMs = 30000, int preDomainDelayMs = 1500);
 const URK_Il2CppApi *ModApi_Il2Cpp(Il2CppApi *api);

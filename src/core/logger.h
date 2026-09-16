@@ -8,6 +8,10 @@
 void Log_Init(bool showConsole, const std::string &logDirectory = std::string());
 void Log_Shutdown();
 
+// Prints the startup ASCII-art banner to the console (if active) and log file.
+// No timestamp prefix; the console output uses a distinct cyan color.
+void Log_Banner();
+
 // printf-style, timestamped, process/thread tagged, written to console (if any)
 // + file + debugger.
 void Log(const char *fmt, ...);

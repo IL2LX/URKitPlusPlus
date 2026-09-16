@@ -1,6 +1,5 @@
 #include "loader_lifecycle.h"
 
-#include "intro.h"
 #include "logger.h"
 
 #include <atomic>
@@ -42,12 +41,10 @@ DWORD RunLoaderCppBoundary() noexcept {
         }
     } catch (const std::exception &exception) {
         Log("[loader][FATAL] Unhandled C++ exception escaped loader startup: %s", exception.what());
-        Intro::Close();
         g_state.store(LifecycleState::Finished, std::memory_order_release);
         return ERROR_UNHANDLED_EXCEPTION;
     } catch (...) {
         Log("[loader][FATAL] Unknown C++ exception escaped loader startup.");
-        Intro::Close();
         g_state.store(LifecycleState::Finished, std::memory_order_release);
         return ERROR_UNHANDLED_EXCEPTION;
     }
