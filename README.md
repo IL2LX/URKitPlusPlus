@@ -1,4 +1,6 @@
-# URKit
+# URKit(++)
+
+- It just support using custom eport files for unityplayer and also support namedeobfuscatiom but very badly cuz me bad coder
 
 [![GitHub Release](https://img.shields.io/github/v/release/Jadis0x/URKit?label=Release)](https://github.com/Jadis0x/URKit/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Jadis0x/URKit/total?label=Downloads)](https://github.com/Jadis0x/URKit/releases)
