@@ -25,7 +25,7 @@ Il2CppApi g_il2cppApi{};
 Il2CppSymbolMap g_symbolMap{};
 
 std::string ExportMapPath() {
-    const std::string directory = Loader_UrKitDir();
+    const std::string directory = Loader_UrKitDir(); 
     if (directory.empty())
         return {};
     return (std::filesystem::path(directory) / "UnityPlayerExports.txt").string();
