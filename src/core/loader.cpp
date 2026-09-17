@@ -65,7 +65,7 @@ LoaderRunStatus Loader_Run(LoaderStartMode mode) {
     const std::string logDirectory = mode == LoaderStartMode::Injected
                                           ? std::filesystem::path(g_cfg.configPath).parent_path().string()
                                           : std::string();
-    Log_Init(g_cfg.showConsole, logDirectory);
+    Log_Init(g_cfg.showConsole, g_cfg.logFullTimestamp, g_cfg.logPidTid, logDirectory);
     Log_Banner();
     const RuntimeBackendDescriptor &backend = RuntimeBackend_Select(g_cfg);
 

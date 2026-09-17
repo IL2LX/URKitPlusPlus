@@ -6,8 +6,8 @@
 
 // Decodes an obfuscated IL2CPP symbol dump. Games like VRChat ship
 // GameAssembly.dll with every class, method, field, property and event
-// renamed. A <ExeDir>\URKit\symbols.json dump maps the obfuscated names the
-// runtime reports back to the readable names a mod author knows:
+// renamed. A <ExeDir>\URKit\DeobfuscationMap.json dump maps the obfuscated
+// names the runtime reports back to the readable names a mod author knows:
 //
 //     {
 //       "assemblies": [
@@ -27,6 +27,16 @@
 //         }
 //       ]
 //     }
+//
+// Two ways to key a record, distinguished by the "obfuscated" value:
+//  * A Beebyte ciphertext (U+00CC..U+00CF charset, 8-23 chars) keys by the
+//    name the runtime reports; the record replaces that name directly.
+//  * Anything else is a STRUCTURAL name, the name the loader generates when
+//    there is no mapping (e.g. "MonoBehaviourPublicAPOb_vOb_lBoStObBo_UUnique"
+//    -> "VRCPlayer"). Class and member maps are then keyed by those generated
+//    structural names and override them, so a dump of resolved names can be
+//    edited into an override map without ever touching ciphertext.
+// Both keying styles can coexist in one file.
 //
 // Resolution is pass-through: a class (or member) that has no entry in the map
 // keeps the name exactly as the game reports it. This intentionally matches a
@@ -53,6 +63,11 @@ struct Il2CppClassSymbols {
 // The whole dump. Keyed by the obfuscated (runtime-reported) class name.
 struct Il2CppSymbolMap {
     std::unordered_map<std::string, Il2CppClassSymbols> classes;
+    // Beebyte accessor-leak pairs recovered from the live metadata: obfuscated
+    // name -> plaintext name. Beebyte renames the name once per build, so one
+    // recovered pair renames EVERY member with that ciphertext. Filled at
+    // launch by Il2Cpp_BuildBeebyteLeakPairs.
+    std::unordered_map<std::string, std::string> globalPairs;
     // Entries that looked like class records but did not parse.
     std::size_t invalidEntries = 0;
 };
@@ -72,3 +87,13 @@ const char *Il2Cpp_ResolveClassName(const Il2CppSymbolMap &map, const char *obfC
 // name looks familiar: unmatched classes stay fully obfuscated.
 const char *Il2Cpp_ResolveMemberName(const Il2CppSymbolMap &map, Il2CppSymbolKind kind,
                                      const char *obfClassName, const char *obfMemberName);
+
+// True when a name is Beebyte ciphertext: 8..23 Unicode chars over the
+// U+00CC..U+00CF alphabet (validated as UTF-8, which is how the runtime and
+// the symbol dump both report it).
+bool Il2Cpp_IsBeebyteCipher(const char *name);
+
+// Resolves an obfuscated name from the global accessor-leak pair table
+// (map.globalPairs). Returns nullptr when there is no pair, so the caller
+// keeps the name as the game reports it.
+const char *Il2Cpp_ResolveGlobalPair(const Il2CppSymbolMap &map, const char *obfName);

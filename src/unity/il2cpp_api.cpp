@@ -12,11 +12,14 @@
 #include <cctype>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <initializer_list>
 #include <limits>
+#include <map>
 #include <mutex>
+#include <set>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -387,6 +390,7 @@ struct BoundExport {
 class StrictIl2CppExportResolver {
   public:
     void SetExportNames(const Il2CppExportNameMap *map) { exportNames_ = map; }
+    void SetVerboseExportLog(bool verbose) { verbose_ = verbose; }
 
     bool Initialize(HMODULE module) {
         module_ = module;
@@ -533,7 +537,7 @@ class StrictIl2CppExportResolver {
             lookupName = name;
             found = exports_.find(lookupName ? lookupName : "");
         }
-        if (mappedName && found != exports_.end())
+        if (mappedName && found != exports_.end() && verbose_)
             Log("[IL2CPP][EXPORT] Resolving %s through the export-name map as '%s'.", name ? name : "<null>",
                 mappedName->c_str());
 
@@ -611,23 +615,26 @@ class StrictIl2CppExportResolver {
             if (duplicate->second.abi != abi) {
                 static_assert(Il2CppExportPolicy_AcceptSharedExactTarget());
                 ++sharedExactTargets_;
-                Log("[IL2CPP][EXPORT] Shared exact target: %s (RVA=0x%08lX ABI=%s) and %s (ABI=%s) both "
-                    "resolve to %p; accepted after exact-name and target validation.",
-                    name, static_cast<unsigned long>(record.rva), ExportAbiName(abi).c_str(),
-                    duplicate->second.name.c_str(), ExportAbiName(duplicate->second.abi).c_str(),
-                    reinterpret_cast<void *>(record.address));
+                if (verbose_)
+                    Log("[IL2CPP][EXPORT] Shared exact target: %s (RVA=0x%08lX ABI=%s) and %s (ABI=%s) both "
+                        "resolve to %p; accepted after exact-name and target validation.",
+                        name, static_cast<unsigned long>(record.rva), ExportAbiName(abi).c_str(),
+                        duplicate->second.name.c_str(), ExportAbiName(duplicate->second.abi).c_str(),
+                        reinterpret_cast<void *>(record.address));
                 return record.address;
             }
             ++sharedExactTargets_;
-            Log("[IL2CPP][EXPORT] %s => %p RVA=0x%08lX ordinal=%hu exact=yes aliasOf=%s ABI=%s accepted=yes.",
-                name, reinterpret_cast<void *>(record.address), static_cast<unsigned long>(record.rva), record.ordinal,
-                duplicate->second.name.c_str(), ExportAbiName(abi).c_str());
+            if (verbose_)
+                Log("[IL2CPP][EXPORT] %s => %p RVA=0x%08lX ordinal=%hu exact=yes aliasOf=%s ABI=%s accepted=yes.",
+                    name, reinterpret_cast<void *>(record.address), static_cast<unsigned long>(record.rva), record.ordinal,
+                    duplicate->second.name.c_str(), ExportAbiName(abi).c_str());
             return record.address;
         }
         assigned_.emplace(reinterpret_cast<uintptr_t>(record.address), BoundExport{name, abi});
-        Log("[IL2CPP][EXPORT] %s => %p RVA=0x%08lX ordinal=%hu exact=yes executable=yes ABI=%s.", name,
-            reinterpret_cast<void *>(record.address), static_cast<unsigned long>(record.rva), record.ordinal,
-            ExportAbiName(abi).c_str());
+        if (verbose_)
+            Log("[IL2CPP][EXPORT] %s => %p RVA=0x%08lX ordinal=%hu exact=yes executable=yes ABI=%s.", name,
+                reinterpret_cast<void *>(record.address), static_cast<unsigned long>(record.rva), record.ordinal,
+                ExportAbiName(abi).c_str());
         return record.address;
     }
 
@@ -652,6 +659,7 @@ class StrictIl2CppExportResolver {
     std::unordered_map<std::string, PeExportRecord> exports_;
     std::unordered_map<uintptr_t, BoundExport> assigned_;
     const Il2CppExportNameMap *exportNames_ = nullptr;
+    bool verbose_ = true;
     std::string failure_;
     size_t optionalUnavailable_ = 0;
     size_t sharedExactTargets_ = 0;
@@ -1174,6 +1182,11 @@ const char *Api_MethodName(const void *m) {
                 return resolved;
         }
     }
+    if (g_api->symbolMap) {
+        const char *resolved = Il2Cpp_ResolveGlobalPair(*g_api->symbolMap, name);
+        if (resolved)
+            return resolved;
+    }
     return name;
 }
 const void *Api_MethodClass(const void *m) {
@@ -1224,6 +1237,11 @@ const char *Api_FieldName(const void *f) {
                 return resolved;
         }
     }
+    if (g_api->symbolMap) {
+        const char *resolved = Il2Cpp_ResolveGlobalPair(*g_api->symbolMap, name);
+        if (resolved)
+            return resolved;
+    }
     return name;
 }
 const void *Api_FieldType(const void *f) {
@@ -1271,6 +1289,11 @@ const char *Api_PropertyName(const void *p) {
             if (resolved)
                 return resolved;
         }
+    }
+    if (g_api->symbolMap) {
+        const char *resolved = Il2Cpp_ResolveGlobalPair(*g_api->symbolMap, name);
+        if (resolved)
+            return resolved;
     }
     return name;
 }
@@ -3287,7 +3310,8 @@ bool Il2CppApi::TryAssemblyCount(size_t &count) const {
     return assemblies != nullptr;
 }
 
-bool Il2Cpp_BindExports(Il2CppApi &api, int timeoutMs, const Il2CppExportNameMap *exportNames) {
+bool Il2Cpp_BindExports(Il2CppApi &api, int timeoutMs, const Il2CppExportNameMap *exportNames,
+                        bool verboseExportLog) {
     api = {};
     // VRChat logic lives entirely behind an optional map: every other game keeps
     // resolving the readiness export and all exact il2cpp_* names directly.
@@ -3296,8 +3320,9 @@ bool Il2Cpp_BindExports(Il2CppApi &api, int timeoutMs, const Il2CppExportNameMap
         const auto mapped = exportNames->realToObfuscated.find(readinessExport);
         if (mapped != exportNames->realToObfuscated.end()) {
             readinessExport = mapped->second;
-            Log("[IL2CPP][EXPORT] Using mapped readiness export il2cpp_domain_get ('%s') for runtime discovery.",
-                mapped->second.c_str());
+            if (verboseExportLog)
+                Log("[IL2CPP][EXPORT] Using mapped readiness export il2cpp_domain_get ('%s') for runtime discovery.",
+                    mapped->second.c_str());
         }
     }
     const std::array<RuntimeModuleCandidate, 1> candidates{
@@ -3327,6 +3352,7 @@ bool Il2Cpp_BindExports(Il2CppApi &api, int timeoutMs, const Il2CppExportNameMap
     }
     if (exportNames)
         resolver.SetExportNames(exportNames);
+    resolver.SetVerboseExportLog(verboseExportLog);
 
     bool ok = true;
 #define BIND(name)                                                                                                    \
@@ -3626,6 +3652,17 @@ const URK_Il2CppApi *ModApi_Il2Cpp(Il2CppApi *api) {
     return &g_publicApi;
 }
 
+// Resolves an obfuscated member name for the symbol dump: the class-scoped
+// rename table first (structural or map override), then global leak pairs.
+const char *ResolveDumpMemberName(const char *className, const char *memberName, Il2CppSymbolKind kind) {
+    if (!g_api || !g_api->symbolMap || !memberName)
+        return nullptr;
+    const char *resolved = Il2Cpp_ResolveMemberName(*g_api->symbolMap, kind, className, memberName);
+    if (resolved)
+        return resolved;
+    return Il2Cpp_ResolveGlobalPair(*g_api->symbolMap, memberName);
+}
+
 bool Il2Cpp_DumpSymbolNames(const char *path) {
     if (!g_api || !g_api->MetadataAccessReady()) {
         SetError("IL2CPP: metadata not ready during symbol dump");
@@ -3678,15 +3715,20 @@ bool Il2Cpp_DumpSymbolNames(const char *path) {
                 continue;
             if (ns)
                 ValidateMetadataCString(ns, "il2cpp_class_get_namespace");
-            out << "C\t" << imageName << '\t' << (ns ? ns : "") << '\t' << className << '\n';
+            const char *resolvedClass =
+                g_api->symbolMap ? Il2Cpp_ResolveClassName(*g_api->symbolMap, className) : nullptr;
+            out << "C\t" << imageName << '\t' << (ns ? ns : "") << '\t'
+                << (resolvedClass ? resolvedClass : className) << '\n';
             void *miter = nullptr;
             while (const Il2CppMethod *method =
                        InvokeMetadata("il2cpp_class_get_methods for symbol dump", g_api->il2cpp_class_get_methods,
                                       klass, &miter)) {
                 const char *mn = InvokeMetadata("il2cpp_method_get_name for symbol dump",
                                                 g_api->il2cpp_method_get_name, method);
-                if (mn && ValidateMetadataCString(mn, "il2cpp_method_get_name"))
-                    out << "M\t" << mn << '\n';
+                if (mn && ValidateMetadataCString(mn, "il2cpp_method_get_name")) {
+                    const char *resolved = ResolveDumpMemberName(className, mn, Il2CppSymbolKind::Method);
+                    out << "M\t" << (resolved ? resolved : mn) << '\n';
+                }
             }
             void *fiter = nullptr;
             while (Il2CppClassField *field =
@@ -3694,8 +3736,10 @@ bool Il2Cpp_DumpSymbolNames(const char *path) {
                                       klass, &fiter)) {
                 const char *fn = InvokeMetadata("il2cpp_field_get_name for symbol dump",
                                                 g_api->il2cpp_field_get_name, field);
-                if (fn && ValidateMetadataCString(fn, "il2cpp_field_get_name"))
-                    out << "F\t" << fn << '\n';
+                if (fn && ValidateMetadataCString(fn, "il2cpp_field_get_name")) {
+                    const char *resolved = ResolveDumpMemberName(className, fn, Il2CppSymbolKind::Field);
+                    out << "F\t" << (resolved ? resolved : fn) << '\n';
+                }
             }
             void *piter = nullptr;
             while (Il2CppProperty *prop =
@@ -3729,10 +3773,973 @@ bool Il2Cpp_DumpSymbolNames(const char *path) {
                             setterName = sn;
                     }
                 }
-                out << "P\t" << pn << '\t' << getterName << '\t' << setterName << '\n';
+                const char *resolved = ResolveDumpMemberName(className, pn, Il2CppSymbolKind::Property);
+                out << "P\t" << (resolved ? resolved : pn) << '\t' << getterName << '\t' << setterName << '\n';
             }
         }
     }
     Log("[IL2CPP] Wrote symbol dump to %s.", path);
+    return true;
+}
+
+namespace {
+const char *StripAccessor(const char *name) {
+    if (!name)
+        return nullptr;
+    if (std::strncmp(name, "get_", 4) == 0 || std::strncmp(name, "set_", 4) == 0)
+        return name + 4;
+    return nullptr;
+}
+
+// Mirrors Unhollower's StringEx.IsInvalidInSource: true when any character is
+// outside [0-9a-zA-Z_`].
+bool IsInvalidInSource(const char *str, size_t length) {
+    for (size_t i = 0; i < length; ++i) {
+        const unsigned char c = static_cast<unsigned char>(str[i]);
+        const bool digit = c >= '0' && c <= '9';
+        const bool alpha = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+        if (!digit && !alpha && c != '_' && c != '`')
+            return true;
+    }
+    return false;
+}
+
+bool IsInvalidInSource(const std::string &str) { return IsInvalidInSource(str.c_str(), str.size()); }
+
+// Mirrors Unhollower's StringEx.IsObfuscated for compile-time name strings:
+// true when any character is outside [0-9a-zA-Z_`.<>].
+bool IsObfuscatedString(const char *str, size_t length) {
+    for (size_t i = 0; i < length; ++i) {
+        const unsigned char c = static_cast<unsigned char>(str[i]);
+        const bool digit = c >= '0' && c <= '9';
+        const bool alpha = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+        if (!digit && !alpha && c != '_' && c != '`' && c != '.' && c != '<' && c != '>')
+            return true;
+    }
+    return false;
+}
+
+bool IsObfuscatedString(const std::string &str) { return IsObfuscatedString(str.c_str(), str.size()); }
+
+uint64_t StableHash(const std::string &str) {
+    uint64_t hash = 0;
+    for (const unsigned char c : str)
+        hash = hash * 37 + c;
+    return hash;
+}
+
+// TypeAttributes visibility mirror of Unhollower's ClassAccessNames table.
+const char *kClassAccessNames[8] = {"Private", "Public", "NPublic", "NPrivate", "NProtected", "NInternal",
+                                    "NFamAndAssem", "NFamOrAssem"};
+
+// Member access labels indexed by attributes & 0x7 (MemberAccessMask).
+const char *kMemberAccessLabels[7] = {"CompilerControlled", "Private", "FamAndAssem", "Internal", "Protected",
+                                      "FamOrAssem", "Public"};
+
+const char *MemberAccessLabel(uint32_t attributes) {
+    const uint32_t index = attributes & 0x7u;
+    return kMemberAccessLabels[index <= 6u ? index : 0];
+}
+
+// Ordered score table mirroring Unhollower's SortedSet<(string, float)>; the
+// sequence number keeps well-ordered first-wins behaviour on equal scores.
+struct ScoreEntry {
+    long long score;
+    long long seq;
+    std::string prefix;
+};
+
+struct ScoreCompare {
+    bool operator()(const ScoreEntry &a, const ScoreEntry &b) const {
+        if (a.score != b.score)
+            return a.score < b.score;
+        return a.seq < b.seq;
+    }
+};
+
+// Mirror of Unhollower's UniquificationContext with the default un-obfuscation
+// limits (TypeDeobfuscationCharsPerUniquifier=2, MaxUniquifiers=10).
+class StructuralUniquifier {
+public:
+    explicit StructuralUniquifier(int charsPer = 2, int max = 10) : myCharsPer(charsPer), myMax(max) {}
+
+    void Push(const std::string &str) {
+        if (IsInvalidInSource(str))
+            return;
+        const std::string prefix = str.substr(0, static_cast<size_t>(myCharsPer));
+        int &count = myCounts[prefix];
+        ++count;
+        // Unhollower score: uniquePrefixes + count*2 + prefixesSeen/100, scaled
+        // by 100 to stay exact in integers.
+        const long long score =
+            static_cast<long long>(myCounts.size()) * 100 + static_cast<long long>(count) * 200 + myPushes;
+        myEntries.insert({score, myPushes, prefix});
+        ++myPushes;
+    }
+
+    void Push(const std::vector<std::string> &strings) {
+        for (const std::string &s : strings)
+            Push(s);
+    }
+
+    bool CheckFull() const { return static_cast<int>(myCounts.size()) >= myMax; }
+
+    std::string GetTop() const {
+        std::string out;
+        int taken = 0;
+        for (const ScoreEntry &entry : myEntries) {
+            if (taken >= myMax)
+                break;
+            out += entry.prefix;
+            ++taken;
+        }
+        return out;
+    }
+
+private:
+    int myCharsPer;
+    int myMax;
+    long long myPushes = 0;
+    std::unordered_map<std::string, int> myCounts;
+    std::set<ScoreEntry, ScoreCompare> myEntries;
+};
+
+using RenameTable = std::unordered_map<std::string, std::string>;
+
+// CorElementType constants relevant to structural naming.
+enum {
+    kTypePtr = 0x0F,
+    kTypeByRef = 0x10,
+    kTypeArray = 0x14,
+    kTypeGenericInst = 0x15,
+    kTypeSzArray = 0x1D,
+};
+
+int TypeKind(const Il2CppType *type) {
+    if (!type || !g_api->il2cpp_type_get_type)
+        return -1;
+    return InvokeMetadata("il2cpp_type_get_type during structural rename", g_api->il2cpp_type_get_type, type);
+}
+
+Il2CppClass *ClassOfType(const Il2CppType *type) {
+    if (!type)
+        return nullptr;
+    Il2CppClass *klass = nullptr;
+    if (g_api->il2cpp_type_get_class_or_element_class)
+        klass = InvokeMetadata("il2cpp_type_get_class_or_element_class during structural rename",
+                               g_api->il2cpp_type_get_class_or_element_class, type);
+    if (!klass && g_api->il2cpp_class_from_type)
+        klass = InvokeMetadata("il2cpp_class_from_type during structural rename", g_api->il2cpp_class_from_type,
+                               type);
+    return klass;
+}
+
+std::string TypeNameOfClass(Il2CppClass *klass) {
+    if (!klass || !g_api->il2cpp_class_get_name)
+        return "Unknown";
+    const char *name = InvokeMetadata("il2cpp_class_get_name during structural rename", g_api->il2cpp_class_get_name,
+                                      klass);
+    if (name && ValidateMetadataCString(name, "il2cpp_class_get_name"))
+        return name;
+    return "Unknown";
+}
+
+std::string NamespaceOfClass(Il2CppClass *klass) {
+    if (!klass || !g_api->il2cpp_class_get_namespace)
+        return "";
+    const char *ns = InvokeMetadata("il2cpp_class_get_namespace during structural rename",
+                                    g_api->il2cpp_class_get_namespace, klass);
+    if (ns && ValidateMetadataCString(ns, "il2cpp_class_get_namespace"))
+        return ns;
+    return "";
+}
+
+std::string RawStructuralTypeName(const Il2CppType *type) {
+    if (!type || !g_api->il2cpp_type_get_name || !g_api->il2cpp_free)
+        return "";
+    char *raw = InvokeMetadata("il2cpp_type_get_name during structural rename", g_api->il2cpp_type_get_name, type);
+    if (!raw)
+        return "";
+    if (!ValidateMetadataCString(raw, "il2cpp_type_get_name")) {
+        g_api->il2cpp_free(raw);
+        return "";
+    }
+    std::string result(raw);
+    g_api->il2cpp_free(raw);
+    return result;
+}
+
+std::string ShortNameOfTypeName(std::string raw) {
+    std::size_t best = std::string::npos;
+    for (const char mark : {'[', ']', '&', '*'}) {
+        const std::size_t pos = raw.find(mark);
+        if (pos != std::string::npos && (best == std::string::npos || pos < best))
+            best = pos;
+    }
+    if (best != std::string::npos)
+        raw.resize(best);
+    const std::size_t dot = raw.rfind('.');
+    if (dot != std::string::npos && dot + 1 < raw.size())
+        raw = raw.substr(dot + 1);
+    return raw;
+}
+
+// Mirrors Unhollower's NameOrRename: publish a renamed class's stable hash when
+// its original name is known to the rename table, else keep the raw name.
+std::string NameOrRename(const std::string &name, const RenameTable *renames) {
+    if (renames) {
+        const auto it = renames->find(name);
+        if (it != renames->end())
+            return std::to_string(StableHash(it->second) % 100);
+    }
+    return name;
+}
+
+// Mirrors GenericNameToStrings (Unhollower Pass05): emits "<name-or-rename>"
+// and "arity" for generic instances/arrays, and reduces obfuscated references
+// to "Obf". Generic parameters are not enumerable through the il2cpp runtime
+// API surface, so their entries are omitted.
+void GenericStringsForType(const Il2CppType *type, const RenameTable *renames, std::vector<std::string> &out) {
+    if (!type) {
+        out.emplace_back("Unknown");
+        return;
+    }
+    const bool structured = TypeKind(type) == kTypeGenericInst || TypeKind(type) == kTypeArray ||
+                            TypeKind(type) == kTypeSzArray;
+    const std::string raw = TypeNameOfClass(ClassOfType(type));
+    const std::string resolved = NameOrRename(raw, renames);
+    if (structured) {
+        const std::size_t backtick = resolved.find('`');
+        if (backtick == std::string::npos) {
+            out.push_back(IsObfuscatedString(resolved) ? std::string("Obf") : resolved);
+        } else {
+            out.push_back(resolved.substr(0, backtick));
+            out.push_back(std::to_string(static_cast<int>(resolved.size() - backtick - 1)));
+        }
+        return;
+    }
+    out.push_back(IsObfuscatedString(resolved) ? std::string("Obf") : resolved);
+}
+
+// ConcatAll of GenericNameToStrings for a bare class reference (base or
+// interface type).
+std::string ConcatGenericStringsForClass(Il2CppClass *klass, const RenameTable *renames) {
+    const std::string raw = TypeNameOfClass(klass);
+    const std::string resolved = NameOrRename(raw, renames);
+    const std::size_t backtick = resolved.find('`');
+    if (backtick != std::string::npos) {
+        return resolved.substr(0, backtick) + std::to_string(static_cast<int>(resolved.size() - backtick - 1));
+    }
+    return IsObfuscatedString(resolved) ? std::string("Obf") : resolved;
+}
+
+std::string FullNameOfType(const Il2CppType *type) {
+    Il2CppClass *klass = ClassOfType(type);
+    if (!klass)
+        return ShortNameOfTypeName(RawStructuralTypeName(type));
+    const std::string ns = NamespaceOfClass(klass);
+    const std::string nm = TypeNameOfClass(klass);
+    return ns.empty() ? nm : ns + "." + nm;
+}
+
+// Unhollower's GetUnmangledName (without generic parameters, which the il2cpp
+// runtime does not expose). Renamed obfuscated types publish their final name.
+std::string UnmangledTypeName(const Il2CppType *type, const RenameTable *finalRenames) {
+    if (!type)
+        return "Unknown";
+    std::string name;
+    const int kind = TypeKind(type);
+    if (kind == kTypeByRef || kind == kTypePtr) {
+        const std::string prefix = kind == kTypeByRef ? "byref_" : "ptr_";
+        name = prefix + ShortNameOfTypeName(RawStructuralTypeName(type));
+    } else {
+        name = TypeNameOfClass(ClassOfType(type));
+        if (finalRenames) {
+            const auto it = finalRenames->find(name);
+            if (it != finalRenames->end())
+                name = it->second;
+        }
+    }
+    std::replace(name.begin(), name.end(), '`', '_');
+    return name;
+}
+
+const Il2CppType *PropertyTypeOf(Il2CppProperty *prop) {
+    if (g_api->il2cpp_property_get_get_method && g_api->il2cpp_method_get_return_type) {
+        const Il2CppMethod *getter = InvokeMetadata("il2cpp_property_get_get_method during structural rename",
+                                                    g_api->il2cpp_property_get_get_method, prop);
+        if (getter)
+            return InvokeMetadata("il2cpp_method_get_return_type during structural rename",
+                                  g_api->il2cpp_method_get_return_type, getter);
+    }
+    if (g_api->il2cpp_property_get_set_method && g_api->il2cpp_method_get_param) {
+        const Il2CppMethod *setter = InvokeMetadata("il2cpp_property_get_set_method during structural rename",
+                                                    g_api->il2cpp_property_get_set_method, prop);
+        if (setter)
+            return InvokeMetadata("il2cpp_method_get_param during structural rename",
+                                  g_api->il2cpp_method_get_param, setter, 0);
+    }
+    return nullptr;
+}
+
+struct AncestorInfo {
+    Il2CppClass *first;
+    int depth;
+};
+
+// Walks the parent chain while parent names remain obfuscated (Unhollower's
+// Pass05 firstUnobfuscatedType loop) and returns the first unobfuscated
+// ancestor together with the number of obfuscated steps taken.
+AncestorInfo FirstUnobfuscatedBase(Il2CppClass *klass) {
+    if (!klass || !g_api->il2cpp_class_get_parent)
+        return {nullptr, 0};
+    Il2CppClass *ancestor = InvokeMetadata("il2cpp_class_get_parent during structural rename",
+                                           g_api->il2cpp_class_get_parent, klass);
+    if (!ancestor)
+        return {nullptr, 0};
+    int depth = 0;
+    while (IsObfuscatedString(TypeNameOfClass(ancestor)) && g_api->il2cpp_class_get_parent) {
+        Il2CppClass *next = InvokeMetadata("il2cpp_class_get_parent during structural rename",
+                                           g_api->il2cpp_class_get_parent, ancestor);
+        if (!next)
+            break;
+        ancestor = next;
+        ++depth;
+    }
+    return {ancestor, depth};
+}
+
+bool IsEnumClass(Il2CppClass *klass) {
+    const AncestorInfo ancestor = FirstUnobfuscatedBase(klass);
+    return ancestor.first && TypeNameOfClass(ancestor.first) == "Enum";
+}
+
+int ClassArity(const std::string &name) {
+    const std::size_t backtick = name.rfind('`');
+    if (backtick == std::string::npos)
+        return 0;
+    int arity = 0;
+    for (size_t i = backtick + 1; i < name.size(); ++i) {
+        if (name[i] >= '0' && name[i] <= '9')
+            arity = arity * 10 + (name[i] - '0');
+        else
+            return 0;
+    }
+    return arity;
+}
+
+struct ClassRenameCtx {
+    std::string origName;
+    Il2CppClass *klass;
+    uint32_t flags;
+    std::string ns;
+    int arity;
+    std::string finalBase;
+};
+
+struct ClassGroupKey {
+    int arity;
+    std::string ns;
+    std::string base;
+};
+
+struct ClassGroupKeyLess {
+    bool operator()(const ClassGroupKey &a, const ClassGroupKey &b) const {
+        if (a.arity != b.arity)
+            return a.arity < b.arity;
+        if (a.ns != b.ns)
+            return a.ns < b.ns;
+        return a.base < b.base;
+    }
+};
+
+// Unhollower Pass05GetUnobfuscatedNameBase: the class "base" name without the
+// trailing Unique/index and generic-arity suffix.
+std::string ComputeUnhollowerClassBase(ClassRenameCtx &ctx, bool allowExtraHeuristics,
+                                       const RenameTable *renames) {
+    const AncestorInfo ancestor = FirstUnobfuscatedBase(ctx.klass);
+    const bool isInterface = (ctx.flags & 0x20u) != 0;
+
+    std::string nameBuilder;
+    if (ancestor.first)
+        nameBuilder += ConcatGenericStringsForClass(ancestor.first, renames);
+    else
+        nameBuilder += isInterface ? "Interface" : "Class";
+    if (ancestor.depth > 0)
+        nameBuilder += std::to_string(ancestor.depth);
+    if (!ctx.origName.empty() && ctx.origName[0] == '<')
+        nameBuilder += "CompilerGenerated";
+    nameBuilder += kClassAccessNames[ctx.flags & 0x7u];
+    if (ctx.flags & 0x80u)
+        nameBuilder += "Abstract";
+    if (ctx.flags & 0x100u)
+        nameBuilder += "Sealed";
+    if (ctx.flags & 0x800u)
+        nameBuilder += "SpecialName";
+
+    if (g_api->il2cpp_class_get_interfaces) {
+        void *iiter = nullptr;
+        while (Il2CppClass *iface = InvokeMetadata("il2cpp_class_get_interfaces during structural rename",
+                                                   g_api->il2cpp_class_get_interfaces, ctx.klass, &iiter)) {
+            if (IsObfuscatedString(TypeNameOfClass(iface)))
+                continue;
+            nameBuilder += ConcatGenericStringsForClass(iface, renames);
+        }
+    }
+
+    StructuralUniquifier uniq;
+    const bool isEnum = IsEnumClass(ctx.klass);
+    int fieldCount = 0;
+    if (g_api->il2cpp_class_get_fields && g_api->il2cpp_field_get_type && g_api->il2cpp_field_get_name) {
+        void *fiter = nullptr;
+        while (Il2CppClassField *field = InvokeMetadata("il2cpp_class_get_fields during structural rename",
+                                                        g_api->il2cpp_class_get_fields, ctx.klass, &fiter)) {
+            ++fieldCount;
+            if (!isEnum) {
+                std::vector<std::string> typeStrings;
+                GenericStringsForType(InvokeMetadata("il2cpp_field_get_type during structural rename",
+                                                     g_api->il2cpp_field_get_type, field),
+                                      renames, typeStrings);
+                uniq.Push(typeStrings);
+            }
+            const char *fieldName = InvokeMetadata("il2cpp_field_get_name during structural rename",
+                                                   g_api->il2cpp_field_get_name, field);
+            if (fieldName && ValidateMetadataCString(fieldName, "il2cpp_field_get_name"))
+                uniq.Push(fieldName);
+            if (uniq.CheckFull())
+                break;
+        }
+    }
+    if (isEnum)
+        uniq.Push(std::to_string(fieldCount) + "v");
+
+    if (g_api->il2cpp_class_get_properties && g_api->il2cpp_property_get_name) {
+        void *piter = nullptr;
+        while (Il2CppProperty *prop = InvokeMetadata("il2cpp_class_get_properties during structural rename",
+                                                     g_api->il2cpp_class_get_properties, ctx.klass, &piter)) {
+            std::vector<std::string> typeStrings;
+            GenericStringsForType(PropertyTypeOf(prop), renames, typeStrings);
+            uniq.Push(typeStrings);
+            const char *propName = InvokeMetadata("il2cpp_property_get_name during structural rename",
+                                                  g_api->il2cpp_property_get_name, prop);
+            if (propName && ValidateMetadataCString(propName, "il2cpp_property_get_name"))
+                uniq.Push(propName);
+            if (uniq.CheckFull())
+                break;
+        }
+    }
+
+    if (ancestor.first && TypeNameOfClass(ancestor.first) == "MulticastDelegate" &&
+        g_api->il2cpp_class_get_methods && g_api->il2cpp_method_get_name && g_api->il2cpp_method_get_return_type &&
+        g_api->il2cpp_method_get_param && g_api->il2cpp_method_get_param_count) {
+        void *miter = nullptr;
+        while (const Il2CppMethod *method = InvokeMetadata("il2cpp_class_get_methods during structural rename",
+                                                           g_api->il2cpp_class_get_methods, ctx.klass, &miter)) {
+            const char *methodName = InvokeMetadata("il2cpp_method_get_name during structural rename",
+                                                    g_api->il2cpp_method_get_name, method);
+            if (!methodName || std::strcmp(methodName, "Invoke") != 0)
+                continue;
+            std::vector<std::string> retStrings;
+            GenericStringsForType(InvokeMetadata("il2cpp_method_get_return_type during structural rename",
+                                                 g_api->il2cpp_method_get_return_type, method),
+                                  renames, retStrings);
+            uniq.Push(retStrings);
+            const uint32_t paramCount = InvokeMetadata("il2cpp_method_get_param_count during structural rename",
+                                                       g_api->il2cpp_method_get_param_count, method);
+            for (uint32_t pi = 0; pi < paramCount; ++pi) {
+                std::vector<std::string> paramStrings;
+                GenericStringsForType(InvokeMetadata("il2cpp_method_get_param during structural rename",
+                                                     g_api->il2cpp_method_get_param, method, pi),
+                                      renames, paramStrings);
+                uniq.Push(paramStrings);
+                if (uniq.CheckFull())
+                    break;
+            }
+            break;
+        }
+    }
+
+    if (isInterface || allowExtraHeuristics) {
+        if (g_api->il2cpp_class_get_methods && g_api->il2cpp_method_get_name &&
+            g_api->il2cpp_method_get_return_type && g_api->il2cpp_method_get_param &&
+            g_api->il2cpp_method_get_param_count) {
+            void *miter = nullptr;
+            while (const Il2CppMethod *method =
+                       InvokeMetadata("il2cpp_class_get_methods during structural rename",
+                                      g_api->il2cpp_class_get_methods, ctx.klass, &miter)) {
+                const char *methodName = InvokeMetadata("il2cpp_method_get_name during structural rename",
+                                                        g_api->il2cpp_method_get_name, method);
+                if (methodName && ValidateMetadataCString(methodName, "il2cpp_method_get_name"))
+                    uniq.Push(methodName);
+                std::vector<std::string> retStrings;
+                GenericStringsForType(InvokeMetadata("il2cpp_method_get_return_type during structural rename",
+                                                     g_api->il2cpp_method_get_return_type, method),
+                                      renames, retStrings);
+                uniq.Push(retStrings);
+                const uint32_t paramCount = InvokeMetadata("il2cpp_method_get_param_count during structural rename",
+                                                           g_api->il2cpp_method_get_param_count, method);
+                for (uint32_t pi = 0; pi < paramCount; ++pi) {
+                    if (g_api->il2cpp_method_get_param_name) {
+                        const char *paramName = InvokeMetadata(
+                            "il2cpp_method_get_param_name during structural rename",
+                            g_api->il2cpp_method_get_param_name, method, pi);
+                        if (paramName && ValidateMetadataCString(paramName, "il2cpp_method_get_param_name"))
+                            uniq.Push(paramName);
+                    }
+                    std::vector<std::string> paramStrings;
+                    GenericStringsForType(InvokeMetadata("il2cpp_method_get_param during structural rename",
+                                                         g_api->il2cpp_method_get_param, method, pi),
+                                          renames, paramStrings);
+                    uniq.Push(paramStrings);
+                    if (uniq.CheckFull())
+                        break;
+                }
+                if (uniq.CheckFull())
+                    break;
+            }
+        }
+    }
+
+    nameBuilder += uniq.GetTop();
+    return nameBuilder;
+}
+
+// Unhollower MethodRewriteContext signature base: "Method" + access/flags +
+// return type + parameter types (GetUnmangledName form). The dead-code PDM
+// suffix is intentionally not applied outside an xref scan.
+std::string MakeMethodSignature(const Il2CppMethod *method, const RenameTable *finalRenames) {
+    uint32_t f = 0;
+    if (g_api->il2cpp_method_get_flags) {
+        InvokeMetadata("il2cpp_method_get_flags during structural rename", g_api->il2cpp_method_get_flags, method,
+                       &f);
+    }
+    std::string out = "Method";
+    const auto appendSegment = [&out](const char *segment) {
+        out += '_';
+        out += segment;
+    };
+    if ((f & 0x7u) != 0)
+        appendSegment(MemberAccessLabel(f));
+    if (f & 0x400u)
+        appendSegment("Abstract");
+    if (f & 0x40u)
+        appendSegment("Virtual");
+    if (f & 0x10u)
+        appendSegment("Static");
+    if (f & 0x20u)
+        appendSegment("Final");
+    if (f & 0x100u)
+        appendSegment("New");
+    out += "_";
+    out += UnmangledTypeName(g_api->il2cpp_method_get_return_type
+                                 ? InvokeMetadata("il2cpp_method_get_return_type during structural rename",
+                                                  g_api->il2cpp_method_get_return_type, method)
+                                 : nullptr,
+                             finalRenames);
+    if (g_api->il2cpp_method_get_param_count && g_api->il2cpp_method_get_param) {
+        const uint32_t paramCount = InvokeMetadata("il2cpp_method_get_param_count during structural rename",
+                                                   g_api->il2cpp_method_get_param_count, method);
+        for (uint32_t pi = 0; pi < paramCount; ++pi) {
+            out += "_";
+            out += UnmangledTypeName(InvokeMetadata("il2cpp_method_get_param during structural rename",
+                                                    g_api->il2cpp_method_get_param, method, pi),
+                                     finalRenames);
+        }
+    }
+    return out;
+}
+
+// Stable identity between same-signature obfuscated methods of one class:
+// attribute mask (MemberAccess|Static|Final|Abstract|Virtual|NewSlot) plus
+// return and parameter full names. Mirrors ParameterSignatureMatchesThis.
+std::string MakeMethodSigKey(const Il2CppMethod *method) {
+    uint32_t f = 0;
+    if (g_api->il2cpp_method_get_flags) {
+        InvokeMetadata("il2cpp_method_get_flags during structural rename", g_api->il2cpp_method_get_flags, method,
+                       &f);
+    }
+    std::string key = std::to_string(f & 0x577u);
+    key += ">";
+    key += FullNameOfType(g_api->il2cpp_method_get_return_type
+                              ? InvokeMetadata("il2cpp_method_get_return_type during structural rename",
+                                               g_api->il2cpp_method_get_return_type, method)
+                              : nullptr);
+    if (g_api->il2cpp_method_get_param_count && g_api->il2cpp_method_get_param) {
+        const uint32_t paramCount = InvokeMetadata("il2cpp_method_get_param_count during structural rename",
+                                                   g_api->il2cpp_method_get_param_count, method);
+        for (uint32_t pi = 0; pi < paramCount; ++pi) {
+            key += ">";
+            key += FullNameOfType(InvokeMetadata("il2cpp_method_get_param during structural rename",
+                                                 g_api->il2cpp_method_get_param, method, pi));
+        }
+    }
+    return key;
+}
+} // namespace
+
+bool Il2Cpp_BuildBeebyteLeakPairs(Il2CppSymbolMap &map) {
+    if (!g_api || !g_api->MetadataAccessReady()) {
+        SetError("IL2CPP: metadata not ready during Beebyte leak scan");
+        return false;
+    }
+    if (!g_api->il2cpp_domain_get_assemblies || !g_api->il2cpp_assembly_get_image ||
+        !g_api->il2cpp_image_get_class_count || !g_api->il2cpp_image_get_class ||
+        !g_api->il2cpp_class_get_properties || !g_api->il2cpp_property_get_name ||
+        !g_api->il2cpp_property_get_get_method || !g_api->il2cpp_property_get_set_method ||
+        !g_api->il2cpp_method_get_name) {
+        SetError("IL2CPP: property/method exports unavailable during Beebyte leak scan");
+        return false;
+    }
+    Il2CppThreadScope attach(*g_api);
+    if (!attach.ok())
+        return false;
+
+    map.globalPairs.clear();
+    size_t assemblyCount = 0;
+    const Il2CppAssembly **assemblies = InvokeMetadata("il2cpp_domain_get_assemblies for Beebyte leak scan",
+                                                       g_api->il2cpp_domain_get_assemblies, g_api->Domain(),
+                                                       &assemblyCount);
+    if (!assemblies)
+        return false;
+
+    for (size_t ai = 0; ai < assemblyCount; ++ai) {
+        const Il2CppImage *image = assemblies[ai]
+                                       ? InvokeMetadata("il2cpp_assembly_get_image for Beebyte leak scan",
+                                                        g_api->il2cpp_assembly_get_image, assemblies[ai])
+                                       : nullptr;
+        const size_t classCount = image ? InvokeMetadata("il2cpp_image_get_class_count for Beebyte leak scan",
+                                                         g_api->il2cpp_image_get_class_count, image)
+                                        : 0;
+        if (!classCount)
+            continue;
+        for (size_t ci = 0; ci < classCount; ++ci) {
+            Il2CppClass *klass =
+                InvokeMetadata("il2cpp_image_get_class for Beebyte leak scan", g_api->il2cpp_image_get_class,
+                               image, ci);
+            if (!klass)
+                continue;
+            void *piter = nullptr;
+            while (Il2CppProperty *prop =
+                       InvokeMetadata("il2cpp_class_get_properties for Beebyte leak scan",
+                                      g_api->il2cpp_class_get_properties, klass, &piter)) {
+                const char *propName = InvokeMetadata("il2cpp_property_get_name for Beebyte leak scan",
+                                                      g_api->il2cpp_property_get_name, prop);
+                if (!propName || !ValidateMetadataCString(propName, "il2cpp_property_get_name"))
+                    continue;
+                const char *accessors[2] = {nullptr, nullptr};
+                const Il2CppMethod *getter = InvokeMetadata("il2cpp_property_get_get_method for Beebyte leak scan",
+                                                            g_api->il2cpp_property_get_get_method, prop);
+                if (getter) {
+                    const char *gn = InvokeMetadata("il2cpp_method_get_name for Beebyte leak scan",
+                                                    g_api->il2cpp_method_get_name, getter);
+                    if (gn && ValidateMetadataCString(gn, "il2cpp_method_get_name"))
+                        accessors[0] = gn;
+                }
+                const Il2CppMethod *setter = InvokeMetadata("il2cpp_property_get_set_method for Beebyte leak scan",
+                                                            g_api->il2cpp_property_get_set_method, prop);
+                if (setter) {
+                    const char *sn = InvokeMetadata("il2cpp_method_get_name for Beebyte leak scan",
+                                                    g_api->il2cpp_method_get_name, setter);
+                    if (sn && ValidateMetadataCString(sn, "il2cpp_method_get_name"))
+                        accessors[1] = sn;
+                }
+                const bool propCipher = Il2Cpp_IsBeebyteCipher(propName);
+                for (const char *accessor : accessors) {
+                    const char *stripped = StripAccessor(accessor);
+                    if (!stripped || stripped[0] == '\0' || stripped[1] == '\0')
+                        continue;
+                    const bool accessorCipher = Il2Cpp_IsBeebyteCipher(stripped);
+                    if (propCipher && !accessorCipher)
+                        map.globalPairs.try_emplace(propName, stripped);
+                    else if (accessorCipher && !propCipher)
+                        map.globalPairs.try_emplace(stripped, propName);
+                }
+            }
+        }
+    }
+    Log("[IL2CPP] Recovered %zu Beebyte accessor-leak pairs from the live metadata; "
+        "members sharing a ciphertext are deobfuscated globally.",
+        map.globalPairs.size());
+    return true;
+}
+
+bool Il2Cpp_BuildStructuralNames(Il2CppSymbolMap &map) {
+    if (!g_api || !g_api->MetadataAccessReady()) {
+        SetError("IL2CPP: metadata not ready during structural rename");
+        return false;
+    }
+    if (!g_api->il2cpp_domain_get_assemblies || !g_api->il2cpp_assembly_get_image ||
+        !g_api->il2cpp_image_get_class_count || !g_api->il2cpp_image_get_class ||
+        !g_api->il2cpp_class_get_name || !g_api->il2cpp_class_get_flags ||
+        !g_api->il2cpp_class_get_parent || !g_api->il2cpp_class_get_namespace ||
+        !g_api->il2cpp_class_get_methods || !g_api->il2cpp_class_get_fields ||
+        !g_api->il2cpp_class_get_properties || !g_api->il2cpp_method_get_name ||
+        !g_api->il2cpp_field_get_name || !g_api->il2cpp_property_get_name) {
+        SetError("IL2CPP: class/member exports unavailable during structural rename");
+        return false;
+    }
+    Il2CppThreadScope attach(*g_api);
+    if (!attach.ok())
+        return false;
+
+    const auto pairProtected = [&map](const char *token) { return map.globalPairs.count(token) != 0; };
+
+    size_t classRenames = 0, methodRenames = 0, fieldRenames = 0, propertyRenames = 0;
+
+    size_t assemblyCount = 0;
+    const Il2CppAssembly **assemblies = InvokeMetadata("il2cpp_domain_get_assemblies for structural rename",
+                                                       g_api->il2cpp_domain_get_assemblies, g_api->Domain(),
+                                                       &assemblyCount);
+    if (!assemblies)
+        return false;
+
+    // --- collect obfuscated classes ---
+    std::vector<ClassRenameCtx> defs;
+    for (size_t ai = 0; ai < assemblyCount; ++ai) {
+        const Il2CppImage *image = assemblies[ai]
+                                       ? InvokeMetadata("il2cpp_assembly_get_image for structural rename",
+                                                        g_api->il2cpp_assembly_get_image, assemblies[ai])
+                                       : nullptr;
+        const size_t imageClassCount = image
+                                           ? InvokeMetadata("il2cpp_image_get_class_count for structural rename",
+                                                            g_api->il2cpp_image_get_class_count, image)
+                                           : 0;
+        for (size_t ci = 0; ci < imageClassCount; ++ci) {
+            Il2CppClass *klass = InvokeMetadata("il2cpp_image_get_class for structural rename",
+                                                g_api->il2cpp_image_get_class, image, ci);
+            if (!klass)
+                continue;
+            const char *className = InvokeMetadata("il2cpp_class_get_name for structural rename",
+                                                   g_api->il2cpp_class_get_name, klass);
+            if (!className || !ValidateMetadataCString(className, "il2cpp_class_get_name"))
+                continue;
+            if (!Il2Cpp_IsBeebyteCipher(className))
+                continue;
+            if (!map.classes[className].realName.empty())
+                continue;
+            ClassRenameCtx newCtx;
+            newCtx.origName = className;
+            newCtx.klass = klass;
+            newCtx.flags = g_api->il2cpp_class_get_flags
+                               ? InvokeMetadata("il2cpp_class_get_flags for structural rename",
+                                                g_api->il2cpp_class_get_flags, klass)
+                               : 0;
+            newCtx.ns = NamespaceOfClass(klass);
+            newCtx.arity = ClassArity(className);
+            defs.push_back(std::move(newCtx));
+        }
+    }
+
+    // --- Unhollower Pass05CreateRenameGroups: two-phase rename grouping ---
+    // Phase one ignores method heuristics; groups that collide on the base name
+    // are dropped and reprocessed with methods in phase two, where the frozen
+    // phase-one survivors drive NameOrRename type references.
+    RenameTable pass1Renames;
+    std::map<ClassGroupKey, std::vector<std::string>, ClassGroupKeyLess> groups;
+    for (auto &ctx : defs) {
+        ctx.finalBase = ComputeUnhollowerClassBase(ctx, false, nullptr);
+        pass1Renames[ctx.origName] = ctx.finalBase;
+        groups[ClassGroupKey{ctx.arity, ctx.ns, ctx.finalBase}].push_back(ctx.origName);
+    }
+    {
+        std::vector<ClassGroupKey> toDrop;
+        for (const auto &kv : groups)
+            if (kv.second.size() > 1)
+                toDrop.push_back(kv.first);
+        for (const ClassGroupKey &key : toDrop) {
+            for (const std::string &token : groups[key])
+                pass1Renames.erase(token);
+            groups.erase(key);
+        }
+    }
+    const RenameTable pass1Snapshot = pass1Renames;
+    for (auto &ctx : defs) {
+        if (pass1Renames.count(ctx.origName) != 0)
+            continue;
+        ctx.finalBase = ComputeUnhollowerClassBase(ctx, true, &pass1Snapshot);
+        pass1Renames[ctx.origName] = ctx.finalBase;
+        groups[ClassGroupKey{ctx.arity, ctx.ns, ctx.finalBase}].push_back(ctx.origName);
+    }
+
+    // --- final class names: base + ("Unique"|group index) + generic suffix ---
+    RenameTable finalRenames;
+    for (auto &ctx : defs) {
+        const auto it = pass1Renames.find(ctx.origName);
+        if (it == pass1Renames.end())
+            continue;
+        int groupSize = 1;
+        int index = 0;
+        const auto groupIt = groups.find(ClassGroupKey{ctx.arity, ctx.ns, it->second});
+        if (groupIt != groups.end()) {
+            groupSize = static_cast<int>(groupIt->second.size());
+            for (const std::string &token : groupIt->second) {
+                if (token == ctx.origName)
+                    break;
+                ++index;
+            }
+            if (index >= groupSize)
+                index = 0;
+        }
+        std::string finalName = it->second;
+        finalName += groupSize == 1 ? "Unique" : std::to_string(index);
+        if (ctx.arity > 0)
+            finalName += "`" + std::to_string(ctx.arity);
+        auto &symbols = map.classes[ctx.origName];
+        // A map entry keyed by the generated structural name overrides it with
+        // the readable name ("obfuscated" holds the structural class name, e.g.
+        // "MonoBehaviourPublicAPOb_vOb_lBoStObBo_UUnique" -> "VRCPlayer").
+        const auto structIt = map.classes.find(finalName);
+        if (structIt != map.classes.end() && !structIt->second.realName.empty()) {
+            symbols.realName = structIt->second.realName;
+            symbols.methods = structIt->second.methods;
+            symbols.fields = structIt->second.fields;
+            symbols.properties = structIt->second.properties;
+            symbols.events = structIt->second.events;
+            finalRenames[ctx.origName] = structIt->second.realName;
+            ++classRenames;
+            continue;
+        }
+        finalRenames[ctx.origName] = finalName;
+        if (symbols.realName.empty()) {
+            symbols.realName = finalName;
+            ++classRenames;
+        }
+    }
+    defs.clear();
+
+    // --- member sweep (field_/prop_/Method_ naming) ---
+    for (size_t ai = 0; ai < assemblyCount; ++ai) {
+        const Il2CppImage *image = assemblies[ai]
+                                       ? InvokeMetadata("il2cpp_assembly_get_image for structural rename",
+                                                        g_api->il2cpp_assembly_get_image, assemblies[ai])
+                                       : nullptr;
+        const size_t imageClassCount = image
+                                           ? InvokeMetadata("il2cpp_image_get_class_count for structural rename",
+                                                            g_api->il2cpp_image_get_class_count, image)
+                                           : 0;
+        for (size_t ci = 0; ci < imageClassCount; ++ci) {
+            Il2CppClass *klass = InvokeMetadata("il2cpp_image_get_class for structural rename",
+                                                g_api->il2cpp_image_get_class, image, ci);
+            if (!klass)
+                continue;
+            const char *className = InvokeMetadata("il2cpp_class_get_name for structural rename",
+                                                   g_api->il2cpp_class_get_name, klass);
+            if (!className || !ValidateMetadataCString(className, "il2cpp_class_get_name"))
+                continue;
+            Il2CppClassSymbols &symbols = map.classes[className];
+
+            // fields: "field_<access>[_Static]_<type>_<count>"
+            if (g_api->il2cpp_class_get_fields && g_api->il2cpp_field_get_name &&
+                g_api->il2cpp_field_get_flags && g_api->il2cpp_field_get_type) {
+                std::unordered_map<std::string, int> fieldCounts;
+                void *fiter = nullptr;
+                while (Il2CppClassField *field =
+                           InvokeMetadata("il2cpp_class_get_fields for structural rename",
+                                          g_api->il2cpp_class_get_fields, klass, &fiter)) {
+                    const char *fieldName = InvokeMetadata("il2cpp_field_get_name for structural rename",
+                                                           g_api->il2cpp_field_get_name, field);
+                    if (!fieldName || !ValidateMetadataCString(fieldName, "il2cpp_field_get_name"))
+                        continue;
+                    if (!Il2Cpp_IsBeebyteCipher(fieldName))
+                        continue;
+                    if (symbols.fields.count(fieldName))
+                        continue;
+                    if (pairProtected(fieldName))
+                        continue;
+                    const uint32_t f = InvokeMetadata("il2cpp_field_get_flags for structural rename",
+                                                      g_api->il2cpp_field_get_flags, field);
+                    const std::string base =
+                        std::string("field_") + MemberAccessLabel(f) + ((f & 0x10u) ? "_Static" : "") + "_" +
+                        UnmangledTypeName(InvokeMetadata("il2cpp_field_get_type for structural rename",
+                                                         g_api->il2cpp_field_get_type, field),
+                                          &finalRenames);
+                    int &count = fieldCounts[base];
+                    const std::string structural = base + "_" + std::to_string(count);
+                    const auto structIt = symbols.fields.find(structural);
+                    if (structIt != symbols.fields.end() && !structIt->second.empty()) {
+                        symbols.fields[fieldName] = structIt->second;
+                        ++count;
+                        ++fieldRenames;
+                        continue;
+                    }
+                    symbols.fields[fieldName] = structural;
+                    ++count;
+                    ++fieldRenames;
+                }
+            }
+
+            // properties: "prop_<type>_<count>"
+            if (g_api->il2cpp_class_get_properties && g_api->il2cpp_property_get_name) {
+                std::unordered_map<std::string, int> propCounts;
+                void *piter = nullptr;
+                while (Il2CppProperty *prop =
+                           InvokeMetadata("il2cpp_class_get_properties for structural rename",
+                                          g_api->il2cpp_class_get_properties, klass, &piter)) {
+                    const char *propName = InvokeMetadata("il2cpp_property_get_name for structural rename",
+                                                          g_api->il2cpp_property_get_name, prop);
+                    if (!propName || !ValidateMetadataCString(propName, "il2cpp_property_get_name"))
+                        continue;
+                    if (!Il2Cpp_IsBeebyteCipher(propName))
+                        continue;
+                    if (symbols.properties.count(propName))
+                        continue;
+                    if (pairProtected(propName))
+                        continue;
+                    const std::string base =
+                        std::string("prop_") + UnmangledTypeName(PropertyTypeOf(prop), &finalRenames);
+                    int &count = propCounts[base];
+                    const std::string structural = base + "_" + std::to_string(count);
+                    const auto structIt = symbols.properties.find(structural);
+                    if (structIt != symbols.properties.end() && !structIt->second.empty()) {
+                        symbols.properties[propName] = structIt->second;
+                        ++count;
+                        ++propertyRenames;
+                        continue;
+                    }
+                    symbols.properties[propName] = structural;
+                    ++count;
+                    ++propertyRenames;
+                }
+            }
+
+            // methods: "Method_<access>[flags]_<ret>_<params>_<sigIndex>"
+            if (g_api->il2cpp_class_get_methods) {
+                std::unordered_map<std::string, int> methodIndexes;
+                void *miter = nullptr;
+                while (const Il2CppMethod *method =
+                           InvokeMetadata("il2cpp_class_get_methods for structural rename",
+                                          g_api->il2cpp_class_get_methods, klass, &miter)) {
+                    const char *methodName = InvokeMetadata("il2cpp_method_get_name for structural rename",
+                                                            g_api->il2cpp_method_get_name, method);
+                    if (!methodName || !ValidateMetadataCString(methodName, "il2cpp_method_get_name"))
+                        continue;
+                    if (!Il2Cpp_IsBeebyteCipher(methodName))
+                        continue;
+                    if (symbols.methods.count(methodName))
+                        continue;
+                    if (pairProtected(methodName))
+                        continue;
+                    const std::string sigKey = MakeMethodSigKey(method);
+                    int &index = methodIndexes[sigKey];
+                    const std::string structural =
+                        MakeMethodSignature(method, &finalRenames) + "_" + std::to_string(index);
+                    const auto structIt = symbols.methods.find(structural);
+                    if (structIt != symbols.methods.end() && !structIt->second.empty()) {
+                        symbols.methods[methodName] = structIt->second;
+                        ++index;
+                        ++methodRenames;
+                        continue;
+                    }
+                    symbols.methods[methodName] = structural;
+                    ++index;
+                    ++methodRenames;
+                }
+            }
+        }
+    }
+
+    Log("[IL2CPP] Generated %zu structural class, %zu method, %zu field and %zu "
+        "property names for obfuscated symbols without a mapping.",
+        classRenames, methodRenames, fieldRenames, propertyRenames);
     return true;
 }

@@ -3,6 +3,7 @@
 #include "logger.h"
 
 #include <cctype>
+#include <cstring>
 #include <fstream>
 #include <vector>
 
@@ -386,4 +387,31 @@ const char *Il2Cpp_ResolveMemberName(const Il2CppSymbolMap &map, Il2CppSymbolKin
         return ResolveFromMap(it->second.events, obfMemberName);
     }
     return nullptr;
+}
+
+bool Il2Cpp_IsBeebyteCipher(const char *name) {
+    if (!name)
+        return false;
+    const size_t len = std::strlen(name);
+    if (len == 0 || len % 2 != 0)  // every cipher char is two UTF-8 bytes
+        return false;
+    const size_t chars = len / 2;
+    if (chars < 8 || chars > 23)
+        return false;
+    for (size_t i = 0; i < chars; ++i) {
+        const unsigned char a = static_cast<unsigned char>(name[i * 2 + 0]);
+        const unsigned char b = static_cast<unsigned char>(name[i * 2 + 1]);
+        if (a != 0xC3)   // UTF-8 lead byte for U+00C0..U+00FF
+            return false;
+        if (b < 0x8C || b > 0x8F)  // U+00CC..U+00CF (Ì Í Î Ï)
+            return false;
+    }
+    return true;
+}
+
+const char *Il2Cpp_ResolveGlobalPair(const Il2CppSymbolMap &map, const char *obfName) {
+    if (!obfName)
+        return nullptr;
+    const auto it = map.globalPairs.find(obfName);
+    return it != map.globalPairs.end() && !it->second.empty() ? it->second.c_str() : nullptr;
 }

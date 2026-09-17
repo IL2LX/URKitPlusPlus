@@ -62,7 +62,7 @@ bool RunIl2Cpp(Config &config) {
         }
     }
 
-    if (!Il2Cpp_BindExports(g_il2cppApi, kRuntimeTimeoutMs, exportNames)) {
+    if (!Il2Cpp_BindExports(g_il2cppApi, kRuntimeTimeoutMs, exportNames, config.logUnityExports)) {
         return false;
     }
 
@@ -90,6 +90,34 @@ bool RunIl2Cpp(Config &config) {
 
     if (!Il2Cpp_WaitForMetadataReady(g_il2cppApi, kRuntimeTimeoutMs, kIl2CppPreDomainSettleMs)) {
         return false;
+    }
+
+    if (config.accessorLeaks) {
+        if (Il2Cpp_BuildBeebyteLeakPairs(g_symbolMap)) {
+            Log("[IL2CPP] Recovered %zu Beebyte accessor-leak pairs from the live "
+                "metadata; matching obfuscated names are deobfuscated.",
+                g_symbolMap.globalPairs.size());
+        } else {
+            Log("[IL2CPP][WARNING] Beebyte accessor-leak scan failed; obfuscated "
+                "names are reported unchanged.");
+        }
+    }
+
+    if (config.structuralNames) {
+        if (Il2Cpp_BuildStructuralNames(g_symbolMap)) {
+            Log("[IL2CPP] Structural names generated for obfuscated classes/members "
+                "without a mapping (deobfuscation map entries take priority).");
+        } else {
+            Log("[IL2CPP][WARNING] Structural rename failed; obfuscated names are "
+                "reported unchanged.");
+        }
+    }
+
+    if (!g_il2cppApi.symbolMap && (!g_symbolMap.classes.empty() || !g_symbolMap.globalPairs.empty())) {
+        g_il2cppApi.symbolMap = &g_symbolMap;
+        Log("[IL2CPP] No DeobfuscationMap.json was loaded, but %zu on-the-fly names "
+            "and %zu leak pairs were recovered at launch; they are active.",
+            g_symbolMap.classes.size(), g_symbolMap.globalPairs.size());
     }
 
     if (config.dumpSymbols) {

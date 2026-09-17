@@ -550,7 +550,8 @@ struct Il2CppApi {
     Il2CppClassField *FindField(Il2CppClass *klass, const char *name) const;
 };
 
-bool Il2Cpp_BindExports(Il2CppApi &api, int timeoutMs = 30000, const Il2CppExportNameMap *exportNames = nullptr);
+bool Il2Cpp_BindExports(Il2CppApi &api, int timeoutMs = 30000, const Il2CppExportNameMap *exportNames = nullptr,
+                        bool verboseExportLog = true);
 bool Il2Cpp_WaitForMetadataReady(Il2CppApi &api, int timeoutMs = 30000, int preDomainDelayMs = 1500);
 const URK_Il2CppApi *ModApi_Il2Cpp(Il2CppApi *api);
 // Dumps every class, method, field and property with their RAW (obfuscated)
@@ -558,3 +559,16 @@ const URK_Il2CppApi *ModApi_Il2Cpp(Il2CppApi *api);
 // Must be called after Il2Cpp_WaitForMetadataReady. The symbol map is NOT
 // applied to the dump: it exists to build the map in the first place.
 bool Il2Cpp_DumpSymbolNames(const char *path);
+// Walks the live metadata and recovers Beebyte accessor-leak pairs into
+// map.globalPairs: (1) a property renamed to ciphertext whose get_/set_ kept
+// the original name, and (2) a plaintext property whose get_/set_ was renamed.
+// Because Beebyte renames the name once per build, the pairs apply globally.
+// Must be called after Il2Cpp_WaitForMetadataReady. Returns false on fatal
+// errors.
+bool Il2Cpp_BuildBeebyteLeakPairs(Il2CppSymbolMap &map);
+// Fills the symbol map with deterministic structural names
+// (e.g. MonoBehaviourPublicSiAyrareRnri...Unique) for every obfuscated class,
+// method, field and property that has NO mapping yet. Entries already present
+// (from the DeobfuscationMap.json file or recovered leak pairs) always win.
+// Must be called after Il2Cpp_WaitForMetadataReady.
+bool Il2Cpp_BuildStructuralNames(Il2CppSymbolMap &map);

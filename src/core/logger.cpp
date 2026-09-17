@@ -12,6 +12,8 @@ static FILE *g_file = nullptr;
 static bool g_console = false;
 static HANDLE g_consoleOutput = INVALID_HANDLE_VALUE;
 static bool g_consoleColors = false;
+static bool g_fullTimestamp = false;
+static bool g_showPidTid = false;
 static WORD g_consoleDefaultAttributes = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
 static std::mutex g_logMutex;
 static std::wstring g_logPath;
@@ -103,13 +105,15 @@ static void ConsoleWriteLine(const char *prefix, const char *message, LogSeverit
     fflush(stdout);
 }
 
-void Log_Init(bool showConsole, const std::string &logDirectory) {
+void Log_Init(bool showConsole, bool fullTimestamp, bool showPidTid, const std::string &logDirectory) {
     const bool consoleRequested = showConsole;
     DWORD consoleError = ERROR_SUCCESS;
     DWORD consoleColorError = ERROR_SUCCESS;
     errno_t fileError = 0;
     {
         std::lock_guard<std::mutex> lock(g_logMutex);
+        g_fullTimestamp = fullTimestamp;
+        g_showPidTid = showPidTid;
         if (showConsole) {
             if (AllocConsole() || GetLastError() == ERROR_ACCESS_DENIED) {
                 FILE *dummy = nullptr;
@@ -227,12 +231,19 @@ void Log(const char *fmt, ...) {
 
     SYSTEMTIME timestamp;
     GetLocalTime(&timestamp);
+    char pidTag[96] = "";
+    if (g_showPidTid)
+        snprintf(pidTag, sizeof(pidTag), " [pid:%lu tid:%lu]", GetCurrentProcessId(), GetCurrentThreadId());
     char prefix[192];
-    snprintf(prefix, sizeof(prefix),
-             "[%04u-%02u-%02u %02u:%02u:%02u.%03u] [URKit] [pid:%lu "
-             "tid:%lu] ",
-             timestamp.wYear, timestamp.wMonth, timestamp.wDay, timestamp.wHour, timestamp.wMinute, timestamp.wSecond,
-             timestamp.wMilliseconds, GetCurrentProcessId(), GetCurrentThreadId());
+    if (g_fullTimestamp) {
+        snprintf(prefix, sizeof(prefix),
+                 "[%04u-%02u-%02u %02u:%02u:%02u.%03u] [URKit]%s ",
+                 timestamp.wYear, timestamp.wMonth, timestamp.wDay, timestamp.wHour, timestamp.wMinute, timestamp.wSecond,
+                 timestamp.wMilliseconds, pidTag);
+    } else {
+        snprintf(prefix, sizeof(prefix), "[%02u:%02u:%02u] [URKit]%s ",
+                 timestamp.wHour, timestamp.wMinute, timestamp.wSecond, pidTag);
+    }
 
     char line[2240];
     snprintf(line, sizeof(line), "%s%s\n", prefix, msg);

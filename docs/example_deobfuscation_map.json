@@ -1,0 +1,43 @@
+{
+    "assemblies": [
+        {
+            "name": "Assembly-CSharp.dll",
+            "classes": [
+                {
+                    "namespace": "Assembly-CSharp",
+                    "obfuscated": "MonoBehaviourPublicAPOb_vOb_lBoStObBo_UUnique",
+                    "name": "VRCPlayer",
+                    "methods": {
+                        "Method_Public_Void_0": "Update",
+                        "Method_Public_Void_Single_1": "OnCollisionEnter",
+                        "Method_Public_Static_Boolean_2": "IsReady"
+                    },
+                    "fields": {
+                        "field_Public_Single_0": "speed",
+                        "field_Private_Static_Boolean_1": "isDead"
+                    },
+                    "properties": {
+                        "prop_String_0": "DisplayName"
+                    },
+                    "events": {}
+                }
+            ]
+        },
+        {
+            "name": "VRC.UI.Elements.dll",
+            "classes": [
+                {
+                    "namespace": "VRC.UI.Elements",
+                    "obfuscated": "MonoBehaviour3PublicCaGaCaObGa_cObVRGa_vUnique",
+                    "name": "QuickMenu",
+                    "methods": {
+                        "Method_Public_Void_0": "Close"
+                    },
+                    "fields": {},
+                    "properties": {},
+                    "events": {}
+                }
+            ]
+        }
+    ]
+}

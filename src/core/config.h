@@ -4,8 +4,13 @@
 
 struct Config {
     bool showConsole = true;
+    bool logFullTimestamp = false;
+    bool logPidTid = false;
     bool safeMode = false;
     bool dumpSymbols = false;
+    bool logUnityExports = false;
+    bool accessorLeaks = true;
+    bool structuralNames = true;
     int initDelayMs = 0;
     std::string runtime = "auto";
     std::string modsDir = "Mods";
