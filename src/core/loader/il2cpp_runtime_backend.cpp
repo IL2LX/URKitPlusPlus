@@ -28,14 +28,14 @@ std::string ExportMapPath() {
     const std::string directory = Loader_UrKitDir();
     if (directory.empty())
         return {};
-    return (std::filesystem::path(directory) / "exports.txt").string();
+    return (std::filesystem::path(directory) / "UnityPlayerExports.txt").string();
 }
 
 std::string SymbolMapPath() {
     const std::string directory = Loader_UrKitDir();
     if (directory.empty())
         return {};
-    return (std::filesystem::path(directory) / "symbols.json").string();
+    return (std::filesystem::path(directory) / "DeobfuscationMap.json").string();
 }
 
 bool RunIl2Cpp(Config &config) {
