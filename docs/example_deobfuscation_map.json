@@ -4,9 +4,9 @@
             "name": "Assembly-CSharp.dll",
             "classes": [
                 {
-                    "namespace": "Assembly-CSharp",
                     "obfuscated": "MonoBehaviourPublicAPOb_vOb_lBoStObBo_UUnique",
                     "name": "VRCPlayer",
+                    "namespace": "",
                     "methods": {
                         "Method_Public_Void_0": "Update",
                         "Method_Public_Void_Single_1": "OnCollisionEnter",
@@ -24,12 +24,28 @@
             ]
         },
         {
+            "name": "VRC.UI.Shared.dll",
+            "classes": [
+                {
+                    "obfuscated": "MonoBehaviourPublicIPointerEnterHandlerIEventSystemHandlerIPointerExitHandlerObLo_l_aLoBoBoObLoBoUnique",
+                    "name": "ToolTip",
+                    "namespace": "",
+                    "methods": {
+                        "Method_Public_Void_0": "Show"
+                    },
+                    "fields": {},
+                    "properties": {},
+                    "events": {}
+                }
+            ]
+        },
+        {
             "name": "VRC.UI.Elements.dll",
             "classes": [
                 {
-                    "namespace": "VRC.UI.Elements",
                     "obfuscated": "MonoBehaviour3PublicCaGaCaObGa_cObVRGa_vUnique",
                     "name": "QuickMenu",
+                    "namespace": "",
                     "methods": {
                         "Method_Public_Void_0": "Close"
                     },

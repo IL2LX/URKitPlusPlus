@@ -4,24 +4,22 @@
       "name": "Assembly-CSharp.dll",
       "classes": [
         {
-          "obfuscated": "GameManager",
+          "obfuscated": "MonoBehaviourPublicLoStBoBRoObRoStBoObUnique",
           "name": "PlayerManager",
-          "namespace": "Assembly-CSharp",
+          "namespace": "",
           "methods": {
-            "DinAodNqkeq": "Update",
-            "HhdLMaopMj": "Start",
-            "ZxFmQskdOes": "OnAvatarChanged"
+            "Method_Public_Void_0": "Update"
           },
           "fields": {
-            "XuEcQocQjm": "isConnected",
-            "OlyHmZxlAe": "sessionId",
-            "RwOncbMvT": "grounded"
+            "field_Private_Boolean_0": "isConnected",
+            "field_Private_String_1": "sessionId",
+            "field_Private_Boolean_2": "grounded"
           },
           "properties": {
-            "KdzAqlBxyq": "IsGrounded"
+            "prop_Boolean_0": "IsGrounded"
           },
           "events": {
-            "BcmOupwZhb": "OnReceivedData"
+            "event_Action_0": "OnReceivedData"
           }
         }
       ]
