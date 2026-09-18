@@ -1,6 +1,11 @@
-# URKit(++)
+# URKit++
 
-- It just support using custom eport files for unityplayer and also support namedeobfuscatiom but very badly cuz me bad coder
+URKit++ is a fork of
+[URKit](https://github.com/Jadis0x/URKit) that adds **deobfuscation support**:
+it can read a `DeobfuscationMap.json`, load custom export-name maps for
+UnityPlayer, and dump rename maps from live IL2CPP metadata. Everything from
+upstream URKit (Unity object access, managed calls, hooks, lifecycle, network,
+ImGui) works the same.
 
 [![GitHub Release](https://img.shields.io/github/v/release/Jadis0x/URKit?label=Release)](https://github.com/Jadis0x/URKit/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Jadis0x/URKit/total?label=Downloads)](https://github.com/Jadis0x/URKit/releases)
@@ -9,14 +14,41 @@
 [![Support](https://img.shields.io/badge/Support-GitHub%20Issues-blue?logo=github)](https://github.com/Jadis0x/URKit/issues)
 [![License](https://img.shields.io/github/license/Jadis0x/URKit)](https://github.com/Jadis0x/URKit/blob/main/LICENSE)
 
-URKit is a native C++ modding toolkit for Windows x64 Unity games. It supports
-Mono and IL2CPP through one loader ABI, and gives you Unity object access,
-managed method calls, hooks, lifecycle callbacks, networking, and an ImGui
-overlay, generated straight into a buildable CMake project.
+## What URKit++ changes over URKit
+
+- **Deobfuscation map** (`URKit\DeobfuscationMap.json`): maps obfuscated
+  IL2CPP class and member names back to their readable names. The loader loads
+  it at backend start, and every lookup (find class, method, field, and the
+  generated SDK helpers) resolves through it, so mods can use real names like
+  `ToolTip` instead of `MonoBehaviourPublicIPointerEnterHandler...Unique`. See
+  [docs/example_deobfuscation_map.json](docs/example_deobfuscation_map.json).
+- **UnityPlayer export map** (`URKit\UnityPlayerExports.txt`): custom
+  export-name file so IL2CPP binding still works when the game's export names
+  are obfuscated (`[N] obfuscated = real_il2cpp_name`, format in
+  [docs/example_exports.txt](docs/example_exports.txt)). When present, export
+  resolution goes through the map instead of exact-name matching.
+- **Rename-map dumper** (`AutoDump=1` in `URKit_config.ini`): at startup the
+  loader writes `URKit\Dumps\DeobfuscationMap.json.dump`,
+  `.readable`, and `.beebyte.csv` (a Beebyte-compatible CSV you can feed back
+  into the map).
+- **On-the-fly name recovery**: even without a map, the loader builds readable
+  structural names at launch (`StructuralNames=1`) and recovers Beebyte
+  accessor-leak pairs (`AccessorLeaks=1`). Both default on.
+- **Reverse name lookups**: `find_class`/`AddComponent` resolve deobfuscated
+  names to the runtime's obfuscated metadata key, so component-by-real-name
+  works even for classes only described by the map.
+
+Example symbol file: [docs/example_symbols.json](docs/example_symbols.json).
 
 <img src="showcase/ss1.png" width="550">
 
 ## What's in a release
+
+The underlying toolkit is URKit: a native C++ modding toolkit for Windows x64
+Unity games. It supports Mono and IL2CPP through one loader ABI, and gives you
+Unity object access, managed method calls, hooks, lifecycle callbacks,
+networking, and an ImGui overlay, generated straight into a buildable CMake
+project.
 
 - `urk-sdk.exe`: generates a Mono or IL2CPP mod project.
 - `urk-updater.exe`: updates a generated project without touching your own files.

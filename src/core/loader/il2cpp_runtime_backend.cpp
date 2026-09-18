@@ -120,17 +120,6 @@ bool RunIl2Cpp(Config &config) {
             g_symbolMap.classes.size(), g_symbolMap.globalPairs.size());
     }
 
-    if (config.dumpSymbols) {
-        const std::string dumpPath = SymbolMapPath() + ".dump";
-        if (Il2Cpp_DumpSymbolNames(dumpPath.c_str())) {
-            Log("[IL2CPP] Symbol dump written to %s; disable DumpSymbols=1 in "
-                "URKit_config.ini once the map exists.",
-                dumpPath.c_str());
-            return true;
-        }
-        Log("[IL2CPP][WARNING] Symbol dump requested but failed to write.");
-    }
-
     if (config.safeMode) {
         Log("[safe-mode][IL2CPP] runtime diagnostics complete; native mods and runtime event hooks disabled.");
         return true;

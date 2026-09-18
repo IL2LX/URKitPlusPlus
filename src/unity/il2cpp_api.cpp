@@ -2978,6 +2978,35 @@ Il2CppClass *Il2CppApi::FindClass(const char *imageName, const char *namespc, co
     Il2CppThreadScope attach(*this);
     if (!attach.ok())
         return nullptr;
+    const auto lookupInImage = [&](const Il2CppImage *image) -> Il2CppClass * {
+        if (!image)
+            return nullptr;
+        const char *const ns = namespc ? namespc : "";
+        Il2CppClass *klass = InvokeMetadata("il2cpp_class_from_name during class lookup", il2cpp_class_from_name, image,
+                                            ns, name);
+        if (klass)
+            return klass;
+        // Mods reference classes by their deobfuscated name (the map's realName,
+        // or the structural name the loader generates), but the runtime keys them
+        // by the raw ciphertext. When the obvious lookup misses, reverse-resolve:
+        // scan the symbol map for the ciphertext key whose readable or structural
+        // name matches the request and retry with that key.
+        if (!symbolMap)
+            return nullptr;
+        for (const auto &kv : symbolMap->classes) {
+            if (!Il2Cpp_IsBeebyteCipher(kv.first.c_str()))
+                continue;
+            if (kv.second.realName != name && kv.second.structuralName != name)
+                continue;
+            Il2CppClass *candidate =
+                InvokeMetadata("il2cpp_class_from_name during reverse class lookup", il2cpp_class_from_name, image,
+                               ns, kv.first.c_str());
+            if (candidate)
+                return candidate;
+        }
+        return nullptr;
+    };
+
     if (!Empty(imageName) && !Empty(name)) {
         const std::string cacheKey = ClassLookupKey(*this, imageName, namespc, name);
         Il2CppClass *cached = nullptr;
@@ -2987,9 +3016,7 @@ Il2CppClass *Il2CppApi::FindClass(const char *imageName, const char *namespc, co
                 return cached;
         }
         const Il2CppImage *image = FindImage(imageName);
-        Il2CppClass *klass = image ? InvokeMetadata("il2cpp_class_from_name during class lookup", il2cpp_class_from_name,
-                                                     image, namespc ? namespc : "", name)
-                                   : nullptr;
+        Il2CppClass *klass = lookupInImage(image);
         if (klass) {
             std::scoped_lock lock(g_il2cppLookupCacheMutex);
             g_il2cppLookupCaches.classes[cacheKey] = klass;
@@ -2999,10 +3026,7 @@ Il2CppClass *Il2CppApi::FindClass(const char *imageName, const char *namespc, co
     if (Empty(name))
         return nullptr;
     if (!Empty(imageName)) {
-        const Il2CppImage *image = FindImage(imageName);
-        return image ? InvokeMetadata("il2cpp_class_from_name during class lookup", il2cpp_class_from_name, image,
-                                      namespc ? namespc : "", name)
-                     : nullptr;
+        return lookupInImage(FindImage(imageName));
     }
 
     // Mono resolves an unqualified class by scanning every loaded assembly. Match
@@ -3031,10 +3055,7 @@ Il2CppClass *Il2CppApi::FindClass(const char *imageName, const char *namespc, co
     for (size_t i = 0; i < count; ++i) {
         const Il2CppImage *candidate = InvokeMetadata("il2cpp_assembly_get_image during unqualified class lookup",
                                                        il2cpp_assembly_get_image, assemblies[i]);
-        Il2CppClass *klass =
-            candidate ? InvokeMetadata("il2cpp_class_from_name during unqualified class lookup", il2cpp_class_from_name,
-                                       candidate, namespc ? namespc : "", name)
-                      : nullptr;
+        Il2CppClass *klass = lookupInImage(candidate);
         if (klass) {
             std::scoped_lock lock(g_il2cppLookupCacheMutex);
             g_il2cppLookupCaches.classes[cacheKey] = klass;

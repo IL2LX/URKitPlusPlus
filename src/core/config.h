@@ -7,7 +7,6 @@ struct Config {
     bool logFullTimestamp = false;
     bool logPidTid = false;
     bool safeMode = false;
-    bool dumpSymbols = false;
     bool autoDump = false;
     bool logUnityExports = false;
     bool accessorLeaks = true;
