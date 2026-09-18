@@ -8,6 +8,8 @@
 #include "logger.h"
 #include "mod_sdk.h"
 
+#include "il2cpp_api.h"
+
 #include <windows.h>
 
 #include <cstddef>
@@ -38,6 +40,29 @@ void LogConfigSummary(const RuntimeBackendDescriptor &backend) {
 void DebugSkip(const std::string &reason) {
     const std::string message = "[URKit][loader] bootstrap skipped: " + reason + "\n";
     OutputDebugStringA(message.c_str());
+}
+
+bool DumpFile(const std::string &directory, const char *name,
+              bool (*dump)(const char *)) {
+    const std::string path = directory + name;
+    const bool ok = dump(path.c_str());
+    Log("[dumps] %s to %s.", ok ? "wrote" : "FAILED to write", path.c_str());
+    return ok;
+}
+
+void DumpEverything() {
+    const std::string directory = Loader_UrKitDir() + "Dumps\\";
+    std::error_code error;
+    std::filesystem::create_directories(directory, error);
+    if (error) {
+        Log("[dumps][ERROR] Failed to create Dumps directory %s: %s",
+            directory.c_str(), error.message().c_str());
+        return;
+    }
+    Log("[dumps] AutoDump=1: dumping symbols to %s", directory.c_str());
+    DumpFile(directory, "DeobfuscationMap.json.dump", &Il2Cpp_DumpSymbolNames);
+    DumpFile(directory, "DeobfuscationMap.json.readable", &Il2Cpp_DumpReadableSymbolNames);
+    DumpFile(directory, "DeobfuscationMap.beebyte.csv", &Il2Cpp_DumpDeobfuscationMapCsv);
 }
 } // namespace
 
@@ -80,6 +105,8 @@ LoaderRunStatus Loader_Run(LoaderStartMode mode) {
 
     if (backendReady) {
         Log("=== Loader initialization succeeded ===");
+        if (g_cfg.autoDump)
+            DumpEverything();
         return LoaderRunStatus::Succeeded;
     }
     Log("=== Loader initialization failed; no native mods were started ===");

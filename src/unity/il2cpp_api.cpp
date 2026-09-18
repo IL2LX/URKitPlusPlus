@@ -3782,6 +3782,217 @@ bool Il2Cpp_DumpSymbolNames(const char *path) {
     return true;
 }
 
+bool Il2Cpp_DumpReadableSymbolNames(const char *path) {
+    if (!g_api || !g_api->MetadataAccessReady()) {
+        SetError("IL2CPP: metadata not ready during readable symbol dump");
+        return false;
+    }
+    Il2CppThreadScope attach(*g_api);
+    if (!attach.ok())
+        return false;
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (!out.is_open())
+        return false;
+    out << "IL2CPP-READABLE-1\tEncoding:UTF-8\n";
+    size_t assemblyCount = 0;
+    if (!InvokeMetadata("il2cpp_domain_get_assemblies for readable symbol dump", g_api->il2cpp_domain_get_assemblies,
+                        g_api->Domain(), &assemblyCount) ||
+        !assemblyCount) {
+        return false;
+    }
+    const Il2CppAssembly **assemblies = g_api->il2cpp_domain_get_assemblies
+                                            ? InvokeMetadata("il2cpp_domain_get_assemblies for readable symbol dump",
+                                                             g_api->il2cpp_domain_get_assemblies, g_api->Domain(),
+                                                             &assemblyCount)
+                                            : nullptr;
+    if (!assemblies)
+        return false;
+    for (size_t ai = 0; ai < assemblyCount; ++ai) {
+        const Il2CppImage *image =
+            assemblies[ai] ? InvokeMetadata("il2cpp_assembly_get_image for readable symbol dump",
+                                            g_api->il2cpp_assembly_get_image, assemblies[ai])
+                           : nullptr;
+        const char *imageName = image ? InvokeMetadata("il2cpp_image_get_name for readable symbol dump",
+                                                       g_api->il2cpp_image_get_name, image)
+                                      : nullptr;
+        if (!imageName || !ValidateMetadataCString(imageName, "il2cpp_image_get_name"))
+            imageName = "<unknown>";
+        out << "[assembly:" << imageName << "]\n";
+        const size_t classCount =
+            image ? InvokeMetadata("il2cpp_image_get_class_count for readable symbol dump",
+                                   g_api->il2cpp_image_get_class_count, image)
+                  : 0;
+        for (size_t ci = 0; ci < classCount; ++ci) {
+            Il2CppClass *klass =
+                InvokeMetadata("il2cpp_image_get_class for readable symbol dump", g_api->il2cpp_image_get_class,
+                               image, ci);
+            if (!klass)
+                continue;
+            const char *className =
+                InvokeMetadata("il2cpp_class_get_name for readable symbol dump", g_api->il2cpp_class_get_name,
+                               klass);
+            const char *ns = InvokeMetadata("il2cpp_class_get_namespace for readable symbol dump",
+                                            g_api->il2cpp_class_get_namespace, klass);
+            if (!className || !ValidateMetadataCString(className, "il2cpp_class_get_name"))
+                continue;
+            if (ns)
+                ValidateMetadataCString(ns, "il2cpp_class_get_namespace");
+            out << "class:" << (ns ? ns : "") << '.' << className;
+            const char *resolvedClass =
+                g_api->symbolMap ? Il2Cpp_ResolveClassName(*g_api->symbolMap, className) : nullptr;
+            if (resolvedClass && std::strcmp(resolvedClass, className) != 0)
+                out << "\t[resolved:" << resolvedClass << ']';
+            out << '\n';
+
+            void *miter = nullptr;
+            while (const Il2CppMethod *method =
+                       InvokeMetadata("il2cpp_class_get_methods for readable symbol dump",
+                                      g_api->il2cpp_class_get_methods, klass, &miter)) {
+                const char *mn = InvokeMetadata("il2cpp_method_get_name for readable symbol dump",
+                                                g_api->il2cpp_method_get_name, method);
+                if (!mn || !ValidateMetadataCString(mn, "il2cpp_method_get_name"))
+                    continue;
+                out << "\tmethod:" << mn
+                    << "\targs:" << InvokeMetadata("il2cpp_method_get_param_count for readable symbol dump",
+                                                   g_api->il2cpp_method_get_param_count, method);
+                const char *resolvedM = ResolveDumpMemberName(className, mn, Il2CppSymbolKind::Method);
+                if (resolvedM && std::strcmp(resolvedM, mn) != 0)
+                    out << "\t[resolved:" << resolvedM << ']';
+                out << '\n';
+            }
+            void *fiter = nullptr;
+            while (Il2CppClassField *field =
+                       InvokeMetadata("il2cpp_class_get_fields for readable symbol dump",
+                                      g_api->il2cpp_class_get_fields, klass, &fiter)) {
+                const char *fn = InvokeMetadata("il2cpp_field_get_name for readable symbol dump",
+                                                g_api->il2cpp_field_get_name, field);
+                if (!fn || !ValidateMetadataCString(fn, "il2cpp_field_get_name"))
+                    continue;
+                out << "\tfield:" << fn;
+                const char *resolvedF = ResolveDumpMemberName(className, fn, Il2CppSymbolKind::Field);
+                if (resolvedF && std::strcmp(resolvedF, fn) != 0)
+                    out << "\t[resolved:" << resolvedF << ']';
+                out << '\n';
+            }
+            void *piter = nullptr;
+            while (Il2CppProperty *prop =
+                       InvokeMetadata("il2cpp_class_get_properties for readable symbol dump",
+                                      g_api->il2cpp_class_get_properties, klass, &piter)) {
+                const char *pn = InvokeMetadata("il2cpp_property_get_name for readable symbol dump",
+                                                g_api->il2cpp_property_get_name, prop);
+                if (!pn || !ValidateMetadataCString(pn, "il2cpp_property_get_name"))
+                    continue;
+                out << "\tproperty:" << pn;
+                if (g_api->il2cpp_property_get_get_method && g_api->il2cpp_method_get_name) {
+                    const Il2CppMethod *getter = InvokeMetadata(
+                        "il2cpp_property_get_get_method for readable symbol dump",
+                        g_api->il2cpp_property_get_get_method, prop);
+                    if (getter) {
+                        const char *gn = InvokeMetadata("il2cpp_method_get_name for readable symbol dump",
+                                                        g_api->il2cpp_method_get_name, getter);
+                        if (gn && ValidateMetadataCString(gn, "il2cpp_method_get_name"))
+                            out << "\tget:" << gn;
+                    }
+                }
+                if (g_api->il2cpp_property_get_set_method && g_api->il2cpp_method_get_name) {
+                    const Il2CppMethod *setter = InvokeMetadata(
+                        "il2cpp_property_get_set_method for readable symbol dump",
+                        g_api->il2cpp_property_get_set_method, prop);
+                    if (setter) {
+                        const char *sn = InvokeMetadata("il2cpp_method_get_name for readable symbol dump",
+                                                        g_api->il2cpp_method_get_name, setter);
+                        if (sn && ValidateMetadataCString(sn, "il2cpp_method_get_name"))
+                            out << "\tset:" << sn;
+                    }
+                }
+                const char *resolvedP = ResolveDumpMemberName(className, pn, Il2CppSymbolKind::Property);
+                if (resolvedP && std::strcmp(resolvedP, pn) != 0)
+                    out << "\t[resolved:" << resolvedP << ']';
+                out << '\n';
+            }
+        }
+    }
+    Log("[IL2CPP] Wrote readable symbol dump to %s.", path);
+    return true;
+}
+
+bool Il2Cpp_DumpDeobfuscationMapCsv(const char *path) {
+    if (!g_api || !g_api->MetadataAccessReady()) {
+        SetError("IL2CPP: metadata not ready during beebyte CSV dump");
+        return false;
+    }
+    if (!g_api->symbolMap) {
+        SetError("IL2CPP: no symbol map during beebyte CSV dump");
+        return false;
+    }
+    Il2CppThreadScope attach(*g_api);
+    if (!attach.ok())
+        return false;
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (!out.is_open())
+        return false;
+    out << "# URKit beebyte-mode DeobfuscationMap dump\n"
+        << "# key: <namespace>.<Il2CppInterop structural name>\n"
+        << "# value: <real name> (empty when the class is not resolved yet)\n"
+        << "# one row per Beebyte-obfuscated class; the structural key is what\n"
+        << "# Il2CppInterop/Cpp2IL derives for the class across builds, so the\n"
+        << "# rows can be edited into the map or merged with beebyte tooling.\n";
+    size_t assemblyCount = 0;
+    if (!InvokeMetadata("il2cpp_domain_get_assemblies for beebyte CSV dump", g_api->il2cpp_domain_get_assemblies,
+                        g_api->Domain(), &assemblyCount) ||
+        !assemblyCount) {
+        return false;
+    }
+    const Il2CppAssembly **assemblies = g_api->il2cpp_domain_get_assemblies
+                                            ? InvokeMetadata("il2cpp_domain_get_assemblies for beebyte CSV dump",
+                                                             g_api->il2cpp_domain_get_assemblies, g_api->Domain(),
+                                                             &assemblyCount)
+                                            : nullptr;
+    if (!assemblies)
+        return false;
+    std::size_t emitted = 0, resolvedCount = 0;
+    for (size_t ai = 0; ai < assemblyCount; ++ai) {
+        const Il2CppImage *image =
+            assemblies[ai] ? InvokeMetadata("il2cpp_assembly_get_image for beebyte CSV dump",
+                                            g_api->il2cpp_assembly_get_image, assemblies[ai])
+                           : nullptr;
+        const size_t classCount =
+            image ? InvokeMetadata("il2cpp_image_get_class_count for beebyte CSV dump",
+                                   g_api->il2cpp_image_get_class_count, image)
+                  : 0;
+        for (size_t ci = 0; ci < classCount; ++ci) {
+            Il2CppClass *klass =
+                InvokeMetadata("il2cpp_image_get_class for beebyte CSV dump", g_api->il2cpp_image_get_class, image, ci);
+            if (!klass)
+                continue;
+            const char *className =
+                InvokeMetadata("il2cpp_class_get_name for beebyte CSV dump", g_api->il2cpp_class_get_name, klass);
+            const char *ns = InvokeMetadata("il2cpp_class_get_namespace for beebyte CSV dump",
+                                            g_api->il2cpp_class_get_namespace, klass);
+            if (!className || !ValidateMetadataCString(className, "il2cpp_class_get_name"))
+                continue;
+            if (ns)
+                ValidateMetadataCString(ns, "il2cpp_class_get_namespace");
+            if (!Il2Cpp_IsBeebyteCipher(className))
+                continue;
+            const auto it = g_api->symbolMap->classes.find(className);
+            if (it == g_api->symbolMap->classes.end() || it->second.structuralName.empty())
+                continue;
+            const std::string &key = it->second.structuralName;
+            const std::string &real = it->second.realName;
+            const std::string value = (real.empty() || real == key) ? std::string() : real;
+            out << ((ns && *ns) ? (std::string(ns) + "." + key) : ("." + key)) << ';' << value << '\n';
+            ++emitted;
+            if (!value.empty())
+                ++resolvedCount;
+        }
+    }
+    Log("[IL2CPP] Wrote beebyte DeobfuscationMap CSV to %s (%zu obfuscated "
+        "classes, %zu resolved).",
+        path, emitted, resolvedCount);
+    return true;
+}
+
 namespace {
 const char *StripAccessor(const char *name) {
     if (!name)
@@ -4585,6 +4796,7 @@ bool Il2Cpp_BuildStructuralNames(Il2CppSymbolMap &map) {
         if (ctx.arity > 0)
             finalName += "`" + std::to_string(ctx.arity);
         auto &symbols = map.classes[ctx.origName];
+        symbols.structuralName = finalName;
         // A map entry keyed by the generated structural name overrides it with
         // the readable name ("obfuscated" holds the structural class name, e.g.
         // "MonoBehaviourPublicAPOb_vOb_lBoStObBo_UUnique" -> "VRCPlayer").

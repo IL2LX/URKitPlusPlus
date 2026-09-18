@@ -559,6 +559,23 @@ const URK_Il2CppApi *ModApi_Il2Cpp(Il2CppApi *api);
 // Must be called after Il2Cpp_WaitForMetadataReady. The symbol map is NOT
 // applied to the dump: it exists to build the map in the first place.
 bool Il2Cpp_DumpSymbolNames(const char *path);
+// Dumps every class as "<namespace>.<name>" with its method, property and
+// field names to <path> as a human-readable listing for external (beebyte)
+// analysis tooling. Raw metadata names are the primary value; existing
+// mappings and structural names are appended as "[resolved:...]" annotations.
+// Thread-safe like Il2Cpp_DumpSymbolNames: it attaches the calling thread to
+// the IL2CPP domain. Must be called after Il2Cpp_WaitForMetadataReady.
+bool Il2Cpp_DumpReadableSymbolNames(const char *path);
+// Dumps the Beebyte DeobfuscationMap CSV to <path>: one row per
+// Beebyte-obfuscated class as "<namespace>.<Il2CppInterop structural name>"
+// <;> "<real name>" (empty value when unresolved). The structural key is the
+// same name Il2CppInterop/Cpp2IL derives across builds, so the file matches
+// the beebyte-mapkit DeobfuscationMap.csv format and can be merged or edited
+// back into the map. Requires the map to have been loaded/structural names
+// built; legacy ciphertext-keyed records have no structural key and are
+// skipped. Thread-safe like Il2Cpp_DumpSymbolNames and must be called after
+// Il2Cpp_WaitForMetadataReady.
+bool Il2Cpp_DumpDeobfuscationMapCsv(const char *path);
 // Walks the live metadata and recovers Beebyte accessor-leak pairs into
 // map.globalPairs: (1) a property renamed to ciphertext whose get_/set_ kept
 // the original name, and (2) a plaintext property whose get_/set_ was renamed.

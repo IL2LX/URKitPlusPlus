@@ -54,6 +54,11 @@ enum class Il2CppSymbolKind {
 // symbol is absent and therefore must be reported as-is.
 struct Il2CppClassSymbols {
     std::string realName;
+    // The Il2CppInterop structural name (e.g. "MonoBehaviourPublicAPOb_vOb_lBo1ObBoStUnique")
+    // generated for this class by Il2Cpp_BuildStructuralNames. It is the name the
+    // structural-keyed records (and the beebyte CSV dump) are keyed by, and it is
+    // never written back to the symbol-file JSON.
+    std::string structuralName;
     std::unordered_map<std::string, std::string> methods;
     std::unordered_map<std::string, std::string> fields;
     std::unordered_map<std::string, std::string> properties;

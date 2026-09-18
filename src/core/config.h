@@ -8,6 +8,7 @@ struct Config {
     bool logPidTid = false;
     bool safeMode = false;
     bool dumpSymbols = false;
+    bool autoDump = false;
     bool logUnityExports = false;
     bool accessorLeaks = true;
     bool structuralNames = true;

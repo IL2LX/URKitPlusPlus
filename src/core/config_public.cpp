@@ -47,6 +47,7 @@ std::string DefaultIni() {
         << "LogPid=" << BoolInt(defaults.logPidTid) << "\n"
         << "SafeMode=" << BoolInt(defaults.safeMode) << "\n"
         << "DumpSymbols=" << BoolInt(defaults.dumpSymbols) << "\n"
+        << "AutoDump=" << BoolInt(defaults.autoDump) << "\n"
         << "LogUnityExports=" << BoolInt(defaults.logUnityExports) << "\n"
         << "AccessorLeaks=" << BoolInt(defaults.accessorLeaks) << "\n"
         << "StructuralNames=" << BoolInt(defaults.structuralNames) << "\n"
@@ -87,6 +88,7 @@ void ReadPublicConfig(const std::string &ini, Config &c) {
     c.logPidTid = GetPrivateProfileIntA(section.c_str(), "LogPid", c.logPidTid, ini.c_str()) != 0;
     c.safeMode = GetPrivateProfileIntA(section.c_str(), "SafeMode", c.safeMode, ini.c_str()) != 0;
     c.dumpSymbols = GetPrivateProfileIntA(section.c_str(), "DumpSymbols", c.dumpSymbols, ini.c_str()) != 0;
+    c.autoDump = GetPrivateProfileIntA(section.c_str(), "AutoDump", c.autoDump, ini.c_str()) != 0;
     c.logUnityExports = GetPrivateProfileIntA(section.c_str(), "LogUnityExports", c.logUnityExports, ini.c_str()) != 0;
     c.accessorLeaks = GetPrivateProfileIntA(section.c_str(), "AccessorLeaks", c.accessorLeaks, ini.c_str()) != 0;
     c.structuralNames = GetPrivateProfileIntA(section.c_str(), "StructuralNames", c.structuralNames, ini.c_str()) != 0;
