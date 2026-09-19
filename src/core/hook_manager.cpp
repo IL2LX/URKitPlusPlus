@@ -142,15 +142,32 @@ DetoursResult UpdateTransactionThreads(std::vector<HANDLE> *opened_threads) {
         const LONG update_result = DetourUpdateThread(thread);
         if (update_result != NO_ERROR) {
             // A thread that ends between the snapshot and the suspend fails with
-            // ERROR_ACCESS_DENIED. It runs no code we could relocate an IP out from
-            // under, so skip it. Anything still running is a real failure.
+            // ERROR_ACCESS_DENIED.
             DWORD exit_code = 0;
             const bool exited = GetExitCodeThread(thread, &exit_code) && exit_code != STILL_ACTIVE;
+            if (!exited) {
+                // Suspend also refuses with ERROR_ACCESS_DENIED while a thread is
+                // deep inside ExitThread/TerminateThread unwinding, even though its
+                // exit code still reads STILL_ACTIVE. That thread's instruction
+                // pointer is already on the way out and it will never execute the
+                // bytes a hook rewrites. Give it a moment to publish an exit code,
+                // then skip it either way; failing the whole transaction (and its
+                // rollback) for a thread that can never run the patched code is
+                // what intermittently rolls startup hooks back.
+                bool terminating = true;
+                for (int attempt = 0; attempt < 16; ++attempt) {
+                    Sleep(1);
+                    DWORD recheck = 0;
+                    if (GetExitCodeThread(thread, &recheck) && recheck != STILL_ACTIVE) {
+                        terminating = false;
+                        break;
+                    }
+                }
+                Log("[hooks][Detours] transaction skipped thread=%d (%s).", entry.th32ThreadID,
+                    terminating ? "terminating, refused suspend" : "exited mid-walk");
+            }
             CloseHandle(thread);
-            if (exited)
-                continue;
-            result = {update_result, "DetourUpdateThread", entry.th32ThreadID};
-            break;
+            continue;
         }
         opened_threads->push_back(thread);
     } while (Thread32Next(snapshot, &entry));

@@ -20,6 +20,12 @@ inline int height() {
 inline float dpi() {
     return detail::InvokeStatic<float>(ScreenType, "get_dpi");
 }
+inline bool fullScreen() {
+    return detail::InvokeStatic<bool>(ScreenType, "get_fullScreen");
+}
+inline void set_fullScreen(bool value) {
+    detail::InvokeStatic<void>(ScreenType, "set_fullScreen", value);
+}
 }
 namespace ObjectFilter {
 inline constexpr int kHideFlagsHierarchyMask = 1;
@@ -116,6 +122,17 @@ inline std::vector<GameObject> FindSceneGameObjects(bool includeInactive = true)
     return FindSceneGameObjectsFiltered(includeInactive ? static_cast<std::uint32_t>(ObjectFilterFlags::IncludeInactive)
                                                         : static_cast<std::uint32_t>(ObjectFilterFlags::None));
 }
+inline void LoadScene(std::string_view name) {
+    ResolvedMethod::resolve_exact("UnityEngine.SceneManagement.SceneManager", "LoadScene", {"System.String"})
+        .invoke<void>(name);
+}
+inline void LoadScene(int buildIndex) {
+    ResolvedMethod::resolve_exact("UnityEngine.SceneManagement.SceneManager", "LoadScene", {"System.Int32"})
+        .invoke<void>(buildIndex);
+}
+inline int sceneCountInBuildSettings() {
+    return detail::InvokeStatic<int>(type(), "get_sceneCountInBuildSettings");
+}
 }
 namespace Time {
 inline float time() {
@@ -133,7 +150,45 @@ inline float timeScale() {
 inline void set_timeScale(float value) {
     detail::InvokeStatic<void>(TimeType, "set_timeScale", value);
 }
+inline double timeAsDouble() {
+    return detail::InvokeStatic<double>(TimeType, "get_timeAsDouble");
 }
+inline float fixedDeltaTime() {
+    return detail::InvokeStatic<float>(TimeType, "get_fixedDeltaTime");
+}
+inline float fixedTime() {
+    return detail::InvokeStatic<float>(TimeType, "get_fixedTime");
+}
+inline float unscaledTime() {
+    return detail::InvokeStatic<float>(TimeType, "get_unscaledTime");
+}
+inline int frameCount() {
+    return detail::InvokeStatic<int>(TimeType, "get_frameCount");
+}
+inline int renderedFrameCount() {
+    return detail::InvokeStatic<int>(TimeType, "get_renderedFrameCount");
+}
+inline float realtimeSinceStartup() {
+    return detail::InvokeStatic<float>(TimeType, "get_realtimeSinceStartup");
+}
+inline float smoothDeltaTime() {
+    return detail::InvokeStatic<float>(TimeType, "get_smoothDeltaTime");
+}
+inline float maximumDeltaTime() {
+    return detail::InvokeStatic<float>(TimeType, "get_maximumDeltaTime");
+}
+inline float timeSinceLevelLoad() {
+    return detail::InvokeStatic<float>(TimeType, "get_timeSinceLevelLoad");
+}
+inline int captureFramerate() {
+    return detail::InvokeStatic<int>(TimeType, "get_captureFramerate");
+}
+}
+constexpr TypeRef InputType{"", "UnityEngine", "Input"};
+constexpr TypeRef ApplicationType{"", "UnityEngine", "Application"};
+constexpr TypeRef PlayerPrefsType{"", "UnityEngine", "PlayerPrefs"};
+constexpr TypeRef PhysicsType{"", "UnityEngine", "Physics"};
+constexpr TypeRef CursorType{"", "UnityEngine", "Cursor"};
 namespace Input {
 inline bool available() {
     return URK::has_input();
@@ -173,6 +228,191 @@ inline bool GetMouseButtonDown(MouseButton button) {
 }
 inline bool GetMouseButtonUp(MouseButton button) {
     return GetMouseButtonUp(static_cast<int>(button));
+}
+inline Vector3 mousePosition() {
+    return detail::InvokeStatic<Vector3>(InputType, "get_mousePosition");
+}
+inline Vector2 mouseScrollDelta() {
+    return detail::InvokeStatic<Vector2>(InputType, "get_mouseScrollDelta");
+}
+inline bool anyKey() {
+    return detail::InvokeStatic<bool>(InputType, "get_anyKey");
+}
+inline bool anyKeyDown() {
+    return detail::InvokeStatic<bool>(InputType, "get_anyKeyDown");
+}
+inline float GetAxis(std::string_view name) {
+    return detail::InvokeStatic<float>(InputType, "GetAxis", name);
+}
+inline float GetAxisRaw(std::string_view name) {
+    return detail::InvokeStatic<float>(InputType, "GetAxisRaw", name);
+}
+inline bool GetButton(std::string_view name) {
+    return detail::InvokeStatic<bool>(InputType, "GetButton", name);
+}
+inline bool GetButtonDown(std::string_view name) {
+    return detail::InvokeStatic<bool>(InputType, "GetButtonDown", name);
+}
+inline bool GetButtonUp(std::string_view name) {
+    return detail::InvokeStatic<bool>(InputType, "GetButtonUp", name);
+}
+inline int touchCount() {
+    return detail::InvokeStatic<int>(InputType, "get_touchCount");
+}
+}
+namespace Application {
+inline std::string dataPath() {
+    return detail::managed_string_to_utf8(detail::InvokeStatic<void *>(ApplicationType, "get_dataPath"));
+}
+inline std::string persistentDataPath() {
+    return detail::managed_string_to_utf8(detail::InvokeStatic<void *>(ApplicationType, "get_persistentDataPath"));
+}
+inline std::string streamingAssetsPath() {
+    return detail::managed_string_to_utf8(detail::InvokeStatic<void *>(ApplicationType, "get_streamingAssetsPath"));
+}
+inline bool isPlaying() {
+    return detail::InvokeStatic<bool>(ApplicationType, "get_isPlaying");
+}
+inline bool isEditor() {
+    return detail::InvokeStatic<bool>(ApplicationType, "get_isEditor");
+}
+inline bool isBatchMode() {
+    return detail::InvokeStatic<bool>(ApplicationType, "get_isBatchMode");
+}
+inline int platform() {
+    return detail::InvokeStatic<int>(ApplicationType, "get_platform");
+}
+inline std::string version() {
+    return detail::managed_string_to_utf8(detail::InvokeStatic<void *>(ApplicationType, "get_version"));
+}
+inline std::string unityVersion() {
+    return detail::managed_string_to_utf8(detail::InvokeStatic<void *>(ApplicationType, "get_unityVersion"));
+}
+inline std::string productName() {
+    return detail::managed_string_to_utf8(detail::InvokeStatic<void *>(ApplicationType, "get_productName"));
+}
+inline std::string companyName() {
+    return detail::managed_string_to_utf8(detail::InvokeStatic<void *>(ApplicationType, "get_companyName"));
+}
+inline int targetFrameRate() {
+    return detail::InvokeStatic<int>(ApplicationType, "get_targetFrameRate");
+}
+inline void set_targetFrameRate(int value) {
+    detail::InvokeStatic<void>(ApplicationType, "set_targetFrameRate", value);
+}
+inline void Quit() {
+    detail::InvokeStatic<void>(ApplicationType, "Quit");
+}
+inline void Quit(int exitCode) {
+    detail::InvokeStatic<void>(ApplicationType, "Quit", exitCode);
+}
+inline void OpenURL(std::string_view url) {
+    detail::InvokeStatic<void>(ApplicationType, "OpenURL", url);
+}
+}
+namespace PlayerPrefs {
+inline void SetInt(std::string_view key, int value) {
+    detail::InvokeStatic<void>(PlayerPrefsType, "SetInt", key, value);
+}
+inline int GetInt(std::string_view key, int defaultValue = 0) {
+    return detail::InvokeStatic<int>(PlayerPrefsType, "GetInt", key, defaultValue);
+}
+inline void SetFloat(std::string_view key, float value) {
+    detail::InvokeStatic<void>(PlayerPrefsType, "SetFloat", key, value);
+}
+inline float GetFloat(std::string_view key, float defaultValue = 0.0f) {
+    return detail::InvokeStatic<float>(PlayerPrefsType, "GetFloat", key, defaultValue);
+}
+inline void SetString(std::string_view key, std::string_view value) {
+    detail::InvokeStatic<void>(PlayerPrefsType, "SetString", key, value);
+}
+inline std::string GetString(std::string_view key, std::string_view defaultValue = "") {
+    return detail::managed_string_to_utf8(
+        detail::InvokeStatic<void *>(PlayerPrefsType, "GetString", key, defaultValue));
+}
+inline bool HasKey(std::string_view key) {
+    return detail::InvokeStatic<bool>(PlayerPrefsType, "HasKey", key);
+}
+inline void DeleteKey(std::string_view key) {
+    detail::InvokeStatic<void>(PlayerPrefsType, "DeleteKey", key);
+}
+inline void DeleteAll() {
+    detail::InvokeStatic<void>(PlayerPrefsType, "DeleteAll");
+}
+inline void Save() {
+    detail::InvokeStatic<void>(PlayerPrefsType, "Save");
+}
+}
+namespace Cursor {
+inline bool visible() {
+    return detail::InvokeStatic<bool>(CursorType, "get_visible");
+}
+inline void set_visible(bool value) {
+    detail::InvokeStatic<void>(CursorType, "set_visible", value);
+}
+inline int lockState() {
+    return detail::InvokeStatic<int>(CursorType, "get_lockState");
+}
+inline void set_lockState(int value) {
+    detail::InvokeStatic<void>(CursorType, "set_lockState", value);
+}
+}
+namespace Physics {
+// UnityEngine.Physics keeps Ray- and Vector3-based overloads with the same
+// arity (Raycast(Ray, float, int) vs Raycast(Vector3, Vector3, float) and the
+// SphereCast equivalents), so every overload here pins its signature explicitly
+// with ResolvedMethod::resolve_exact; an argc-only lookup could silently bind
+// the wrong method.
+inline bool Raycast(Vector3 origin, Vector3 direction) {
+    return ResolvedMethod::resolve_exact("UnityEngine.Physics", "Raycast",
+                                         {"UnityEngine.Vector3", "UnityEngine.Vector3"})
+        .invoke<bool>(origin, direction);
+}
+inline bool Raycast(Vector3 origin, Vector3 direction, float maxDistance) {
+    return ResolvedMethod::resolve_exact("UnityEngine.Physics", "Raycast",
+                                         {"UnityEngine.Vector3", "UnityEngine.Vector3", "System.Single"})
+        .invoke<bool>(origin, direction, maxDistance);
+}
+inline bool Raycast(Vector3 origin, Vector3 direction, float maxDistance, int layerMask) {
+    return ResolvedMethod::resolve_exact("UnityEngine.Physics", "Raycast",
+                                         {"UnityEngine.Vector3", "UnityEngine.Vector3", "System.Single",
+                                          "System.Int32"})
+        .invoke<bool>(origin, direction, maxDistance, layerMask);
+}
+inline bool Raycast(Vector3 origin, Vector3 direction, float maxDistance, int layerMask, int queryTriggerInteraction) {
+    return ResolvedMethod::resolve_exact("UnityEngine.Physics", "Raycast",
+                                         {"UnityEngine.Vector3", "UnityEngine.Vector3", "System.Single",
+                                          "System.Int32", "UnityEngine.QueryTriggerInteraction"})
+        .invoke<bool>(origin, direction, maxDistance, layerMask, queryTriggerInteraction);
+}
+inline bool SphereCast(Vector3 origin, float radius, Vector3 direction, float maxDistance) {
+    return ResolvedMethod::resolve_exact("UnityEngine.Physics", "SphereCast",
+                                         {"UnityEngine.Vector3", "System.Single", "UnityEngine.Vector3",
+                                          "System.Single"})
+        .invoke<bool>(origin, radius, direction, maxDistance);
+}
+inline bool SphereCast(Vector3 origin, float radius, Vector3 direction, float maxDistance, int layerMask) {
+    return ResolvedMethod::resolve_exact("UnityEngine.Physics", "SphereCast",
+                                         {"UnityEngine.Vector3", "System.Single", "UnityEngine.Vector3",
+                                          "System.Single", "System.Int32"})
+        .invoke<bool>(origin, radius, direction, maxDistance, layerMask);
+}
+inline bool SphereCast(Vector3 origin, float radius, Vector3 direction, float maxDistance, int layerMask,
+                       int queryTriggerInteraction) {
+    return ResolvedMethod::resolve_exact("UnityEngine.Physics", "SphereCast",
+                                         {"UnityEngine.Vector3", "System.Single", "UnityEngine.Vector3",
+                                          "System.Single", "System.Int32", "UnityEngine.QueryTriggerInteraction"})
+        .invoke<bool>(origin, radius, direction, maxDistance, layerMask, queryTriggerInteraction);
+}
+// OverlapSphere has no Ray counterpart, so the three-parameter form is
+// unambiguous by arity and uses the classic array call.
+inline std::vector<Collider> OverlapSphere(Vector3 center, float radius, int layerMask = -5) {
+    return detail::StaticArrayCall<Collider>(PhysicsType, "OverlapSphere", center, radius, layerMask);
+}
+}
+namespace Resources {
+inline Object Load(std::string_view path) {
+    return detail::InvokeStatic<Object>(ResourcesType, "Load", path);
 }
 }
 inline Vector2 screen_size(Camera camera = {}) {

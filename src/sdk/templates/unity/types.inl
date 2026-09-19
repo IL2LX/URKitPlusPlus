@@ -678,6 +678,25 @@ enum class KeyCode : int {
     Mouse5 = 328,
     Mouse6 = 329
 };
+enum class Space : int {
+    Self = 0,
+    World = 1
+};
+// The primitive created by GameObject::CreatePrimitive. Runner scripts rarely
+// need to build primitives, but keeping the mapping alongside the ported
+// UnityEngine enum avoids a magic int at the call site.
+enum class PrimitiveType : int {
+    Sphere = 0,
+    Capsule = 1,
+    Cylinder = 2,
+    Cube = 3,
+    Plane = 4,
+    Quad = 5
+};
+enum class SendMessageOptions : int {
+    RequireReceiver = 0,
+    DontRequireReceiver = 1
+};
 using DiagnosticSink = void (*)(const char *);
 
 namespace detail {
@@ -926,7 +945,20 @@ struct Backend {
         << backendNs << R"URKUNITY(::class_get_type(static_cast<const URK::)URKUNITY" << backendNs
         << R"URKUNITY(::Class*>(k)); return t ? URK::)URKUNITY" << backendNs
         << R"URKUNITY(::type_get_object(t) : nullptr; }
-    )URKUNITY"
+    static bool supports_method_hook() { return )URKUNITY"
+        << (mono ? "false;" : "true;")
+        << R"URKUNITY( }
+    static bool attach_method_hook(std::string_view image, std::string_view ns, std::string_view klass,
+                                   std::string_view method, const char* const* parameterTypes, int parameterCount,
+                                   void** original, void* detour) )URKUNITY"
+        << (mono
+                ? "{ (void)image; (void)ns; (void)klass; (void)method; (void)parameterTypes; (void)parameterCount; "
+                  "(void)original; (void)detour; return false; }"
+                : "{ auto i = z(image), n = z(ns), c = z(klass), m = z(method); ::URK_Il2CppManagedMethodDesc desc = "
+                  "URK::il2cpp::managed_method_desc(i.c_str(), n.c_str(), c.c_str(), m.c_str(), parameterTypes, "
+                  "parameterCount); return URK::il2cpp::attach_managed_method_hook(&desc, original, detour, nullptr, "
+                  "nullptr) != 0; }")
+        << R"URKUNITY(    )URKUNITY"
         << methodObjectHelper << methodParameterCountHelper << valueBoxHelper << R"URKUNITY(
     static std::int64_t string_length(void* string) { return static_cast<std::int64_t>(URK::)URKUNITY"
         << backendNs << R"URKUNITY(::string_length(static_cast<URK::)URKUNITY" << backendNs

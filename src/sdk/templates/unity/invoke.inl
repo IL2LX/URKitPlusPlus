@@ -1468,5 +1468,220 @@ inline std::vector<std::string> Object::CallStringArrayExact(
     }
     return out;
 }
+
+namespace detail {
+// "VRC.SDKBase.Networking" -> {"VRC.SDKBase", "Networking"}. The empty image
+// slot makes TypeRef scan every loaded assembly on both backends, so lookup is
+// backend-neutral and cached.
+inline std::pair<std::string, std::string> split_fqn(std::string_view fqn) {
+    const std::size_t dot = fqn.rfind('.');
+    if (dot == std::string_view::npos)
+        return {std::string{}, std::string(fqn)};
+    return {std::string(fqn.substr(0, dot)), std::string(fqn.substr(dot + 1))};
+}
+
+// Resolve by name with no arity filter. Both backends reject argc < 0 in
+// find_method (IL2CPP outright, Mono on ambiguity), so this walks the class
+// and its bases directly. It answers only when exactly one method matches and
+// otherwise fails with an ambiguity error, mirroring find_method's contract.
+inline const void *find_method_any_arity(const void *klass, std::string_view methodName, int &outArgc) {
+    outArgc = -1;
+    if (!klass) {
+        set_error("Unity method lookup failed: class is null");
+        return nullptr;
+    }
+    const std::string requested(methodName);
+    const void *current = klass;
+    const void *match = nullptr;
+    std::size_t candidates = 0;
+    while (current) {
+        void *iterator = nullptr;
+        while (const void *candidate = Backend::class_get_methods(current, &iterator)) {
+            const char *name = Backend::method_get_name(candidate);
+            if (!name || requested != name)
+                continue;
+            if (!match) {
+                match = candidate;
+                outArgc = static_cast<int>(Backend::method_get_param_count(candidate));
+            }
+            ++candidates;
+        }
+        current = Backend::class_get_parent(current);
+    }
+    if (candidates > 1) {
+        set_error("Unity method lookup failed: ambiguous method: " + requested);
+        return nullptr;
+    }
+    return match;
+}
+} // namespace detail
+
+// A cached, reusable method handle, mirroring the IL2CPP-SDK MethodHandler.
+// resolve() splits a full class name, resolves the class through TypeRef's
+// cached scan (empty image = all assemblies on either backend), and caches the
+// Method handle each backend keeps for exact (class, name, arity) hits. Hold
+// the ResolvedMethod in a function-local static or a module field and invoke()
+// per frame without re-walking metadata.
+class ResolvedMethod {
+  public:
+    ResolvedMethod() noexcept = default;
+
+    static ResolvedMethod resolve(std::string_view className, std::string_view methodName, int argc = -1) {
+        detail::clear_error();
+        const std::pair<std::string, std::string> parts = detail::split_fqn(className);
+        const TypeRef type{std::string_view{}, parts.first, parts.second};
+        const void *k = type.resolve_class();
+        if (!k) {
+            detail::set_error(std::string("Unity ResolvedMethod::resolve failed: class not found: ") +
+                              std::string(className));
+            detail::append_backend_error();
+            return {};
+        }
+        const void *m = nullptr;
+        int resolvedArgc = argc;
+        if (argc >= 0) {
+            m = detail::Backend::find_method(k, methodName, argc);
+        } else {
+            m = detail::find_method_any_arity(k, methodName, resolvedArgc);
+        }
+        if (!m) {
+            detail::set_error(std::string("Unity ResolvedMethod::resolve failed: method not found or ambiguous: ") +
+                              std::string(className) + "." + std::string(methodName) +
+                              (argc >= 0 ? "/" + std::to_string(argc) : std::string("/any")));
+            detail::append_backend_error();
+            return {};
+        }
+        ResolvedMethod out;
+        out.klass_ = k;
+        out.method_ = m;
+        out.argc_ = resolvedArgc;
+        out.methodName_ = std::string(methodName);
+        return out;
+    }
+
+    static ResolvedMethod resolve_exact(std::string_view className, std::string_view methodName,
+                                        const std::vector<const char *> &parameterTypeNames) {
+        detail::clear_error();
+        const std::pair<std::string, std::string> parts = detail::split_fqn(className);
+        const TypeRef type{std::string_view{}, parts.first, parts.second};
+        const void *k = type.resolve_class();
+        if (!k) {
+            detail::set_error(std::string("Unity ResolvedMethod::resolve_exact failed: class not found: ") +
+                              std::string(className));
+            detail::append_backend_error();
+            return {};
+        }
+        const void *m = detail::Backend::find_method_exact(k, methodName, parameterTypeNames);
+        if (!m) {
+            detail::set_error(std::string("Unity ResolvedMethod::resolve_exact failed: exact method not found: ") +
+                              std::string(className) + "." + detail::signature_text(methodName, parameterTypeNames));
+            detail::append_backend_error();
+            return {};
+        }
+        ResolvedMethod out;
+        out.klass_ = k;
+        out.method_ = m;
+        out.argc_ = static_cast<int>(parameterTypeNames.size());
+        out.methodName_ = std::string(methodName);
+        return out;
+    }
+
+    explicit operator bool() const noexcept {
+        return klass_ && method_;
+    }
+    const void *class_handle() const noexcept {
+        return klass_;
+    }
+    const void *method_handle() const noexcept {
+        return method_;
+    }
+    int argc() const noexcept {
+        return argc_;
+    }
+
+    // Static invoke. resolve() with argc = -1 disables the arity check; the
+    // method is then dispatched with whatever argument count the call site
+    // supplies and the runtime rejects a mismatch.
+    template <class Ret = void, class... Args> Ret invoke(Args &&...args) const {
+        return invoke_impl<Ret>(nullptr, std::forward<Args>(args)...);
+    }
+    // Instance invoke. The managed target is passed separately from the method
+    // arguments so a single Object argument cannot collide with the static
+    // overload's pack.
+    template <class Ret = void, class... Args> Ret call(void *target, Args &&...args) const {
+        return invoke_impl<Ret>(target, std::forward<Args>(args)...);
+    }
+    template <class Ret = void, class... Args> Ret call(const Object &target, Args &&...args) const {
+        return invoke_impl<Ret>(target.handle(), std::forward<Args>(args)...);
+    }
+
+  private:
+    template <class Ret, class... Args> Ret invoke_impl(void *target, Args &&...args) const {
+        detail::clear_error();
+        if (!klass_ || !method_) {
+            detail::set_error("Unity ResolvedMethod::invoke failed: method has not been resolved");
+            return detail::from_result<Ret>(nullptr);
+        }
+        if (argc_ >= 0 && static_cast<std::size_t>(argc_) != sizeof...(Args)) {
+            detail::set_error(std::string("Unity ResolvedMethod::invoke failed: argument count mismatch for ") +
+                              methodName_ + ": resolved with " + std::to_string(argc_) + ", invoked with " +
+                              std::to_string(sizeof...(Args)));
+            return detail::from_result<Ret>(nullptr);
+        }
+        auto pack = std::tuple<detail::Arg<std::remove_cvref_t<Args>>...>(
+            detail::Arg<std::remove_cvref_t<Args>>(std::forward<Args>(args))...);
+        std::array<void *, sizeof...(Args)> argv{};
+        std::size_t index = 0;
+        bool argsValid = true;
+        std::apply([&](auto &...a) { ((argsValid = argsValid && a.valid, argv[index++] = a.ptr), ...); }, pack);
+        if (!argsValid) {
+            detail::set_error(std::string("Unity ResolvedMethod::invoke failed: managed string "
+                                          "argument allocation failed in ") +
+                              methodName_);
+            detail::append_backend_error();
+            return detail::from_result<Ret>(nullptr);
+        }
+        if (target) {
+            const void *k = detail::Backend::object_get_class(target);
+            if (k && detail::Backend::class_is_valuetype(k)) {
+                void *result = detail::invoke_value_type_method(method_, klass_, target, pack);
+                return detail::from_result<Ret>(result);
+            }
+        }
+        void *result = nullptr;
+        void *ex = nullptr;
+        if (!detail::Backend::runtime_invoke(method_, target, argv.empty() ? nullptr : argv.data(), &result, &ex) ||
+            ex) {
+            detail::set_error(std::string("Unity ResolvedMethod::invoke failed: runtime_invoke exception in ") +
+                              methodName_);
+            detail::append_backend_error();
+            return detail::from_result<Ret>(nullptr);
+        }
+        return detail::from_result<Ret>(result);
+    }
+
+    const void *klass_ = nullptr;
+    const void *method_ = nullptr;
+    int argc_ = -1;
+    std::string methodName_;
+};
+
+// One-liner static call by full class name, e.g.
+// InvokeStaticFq<double>("VRC.SDKBase.Networking", "GetServerTimeInSeconds").
+// Resolves with the arity of the supplied arguments, matching find_method's
+// ambiguity contract.
+template <class Ret = void, class... Args>
+Ret InvokeStaticFq(std::string_view className, std::string_view methodName, Args &&...args) {
+    const ResolvedMethod resolved = ResolvedMethod::resolve(className, methodName, static_cast<int>(sizeof...(Args)));
+    return resolved.invoke<Ret>(std::forward<Args>(args)...);
+}
+
+// Static call returning a managed array by full class name. Copies the rooted
+// elements, so the caller owns no GC lifetime.
+template <class T, class... Args>
+std::vector<T> StaticArrayCallFq(std::string_view className, std::string_view methodName, Args &&...args) {
+    void *array = InvokeStaticFq<void *>(className, methodName, std::forward<Args>(args)...);
+    return detail::RootedObjectArray<T>::from_managed_array(array, "Unity FQN static array call").copy_items();
+}
 )URKUNITY";
 

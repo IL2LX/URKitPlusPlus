@@ -1,4 +1,166 @@
     out << R"URKUNITY(// URK_UNITY_COMPONENTS_BEGIN
+namespace events_detail {
+struct EventListenerSlot {
+    void *callback;
+    std::uint64_t token;
+};
+inline std::mutex &events_mutex() {
+    static std::mutex value;
+    return value;
+}
+inline std::unordered_map<void *, std::vector<EventListenerSlot>> &events() {
+    static std::unordered_map<void *, std::vector<EventListenerSlot>> value;
+    return value;
+}
+inline std::uint64_t next_event_token() {
+    static std::uint64_t counter = 0;
+    return ++counter;
+}
+inline std::uint64_t listeners_add(void *eventHandle, void *callback) {
+    std::lock_guard<std::mutex> lock(events_mutex());
+    const std::uint64_t token = next_event_token();
+    events()[eventHandle].push_back(EventListenerSlot{callback, token});
+    return token;
+}
+inline bool listeners_remove_token(void *eventHandle, std::uint64_t token) {
+    std::lock_guard<std::mutex> lock(events_mutex());
+    const auto found = events().find(eventHandle);
+    if (found == events().end())
+        return false;
+    auto &slots = found->second;
+    const auto it = std::find_if(slots.begin(), slots.end(),
+                                 [token](const EventListenerSlot &slot) { return slot.token == token; });
+    if (it == slots.end())
+        return false;
+    slots.erase(it);
+    return true;
+}
+inline bool listeners_remove_callback(void *eventHandle, void *callback) {
+    std::lock_guard<std::mutex> lock(events_mutex());
+    const auto found = events().find(eventHandle);
+    if (found == events().end())
+        return false;
+    auto &slots = found->second;
+    const auto it = std::find_if(slots.begin(), slots.end(),
+                                 [callback](const EventListenerSlot &slot) { return slot.callback == callback; });
+    if (it == slots.end())
+        return false;
+    slots.erase(it);
+    return true;
+}
+inline void listeners_clear(void *eventHandle) {
+    std::lock_guard<std::mutex> lock(events_mutex());
+    const auto found = events().find(eventHandle);
+    if (found != events().end())
+        events().erase(found);
+}
+inline std::vector<EventListenerSlot> listeners_snapshot(void *eventHandle) {
+    std::lock_guard<std::mutex> lock(events_mutex());
+    const auto found = events().find(eventHandle);
+    return found != events().end() ? found->second : std::vector<EventListenerSlot>{};
+}
+inline void dispatch_zero(void *eventHandle) {
+    const std::vector<EventListenerSlot> snapshot = listeners_snapshot(eventHandle);
+    for (const EventListenerSlot &slot : snapshot) {
+        void (*callback)() = reinterpret_cast<void (*)()>(slot.callback);
+        callback();
+    }
+}
+
+// The non-generic UnityEvent.Invoke is detoured once per process so game-driven
+// raises (Button.OnPointerClick -> onClick.Invoke) reach native listeners too.
+// The Mono runtime API in the fixed host ABI has no method-hook facility, so on
+// Mono the SDK-side Invoke() owns dispatch and game-driven raises are not heard.
+inline void *&unity_event_original() {
+    static void *value = nullptr;
+    return value;
+}
+inline void unity_event_detour(void *eventHandle) {
+    dispatch_zero(eventHandle);
+    void *original = unity_event_original();
+    if (original) {
+        void (*invoke)(void *) = reinterpret_cast<void (*)(void *)>(original);
+        invoke(eventHandle);
+    }
+}
+inline void ensure_unity_event_hook() {
+    if (!detail::Backend::supports_method_hook())
+        return;
+    static std::once_flag flag;
+    std::call_once(flag, [] {
+        void *original = nullptr;
+        if (detail::Backend::attach_method_hook("", "UnityEngine.Events", "UnityEvent", "Invoke", nullptr, 0,
+                                                &original, reinterpret_cast<void *>(&unity_event_detour)))
+            unity_event_original() = original;
+    });
+}
+} // namespace events_detail
+
+// Wraps UnityEngine.Events.UnityEvent. Native callbacks registered through
+// AddListener run when the managed event fires.
+struct UnityEvent : Object {
+    UnityEvent() = default;
+    explicit UnityEvent(void *h) : Object(h) {
+    }
+    std::uint64_t AddListener(void (*callback)()) {
+        if (!callback || !handle())
+            return 0;
+        events_detail::ensure_unity_event_hook();
+        return events_detail::listeners_add(handle(), reinterpret_cast<void *>(callback));
+    }
+    bool RemoveListener(std::uint64_t token) {
+        return events_detail::listeners_remove_token(handle(), token);
+    }
+    bool RemoveListener(void (*callback)()) {
+        return events_detail::listeners_remove_callback(handle(), reinterpret_cast<void *>(callback));
+    }
+    void ClearListeners() {
+        events_detail::listeners_clear(handle());
+    }
+    void Invoke() const {
+        if (detail::Backend::supports_method_hook()) {
+            // IL2CPP: Invoke is detoured, so the listeners dispatch inside the
+            // hook and the original managed invocation runs afterwards.
+            Call<void>("Invoke");
+        } else {
+            // Mono: no method hook in the fixed host ABI; fire native listeners
+            // here, then run the managed invocation.
+            events_detail::dispatch_zero(handle());
+            Call<void>("Invoke");
+        }
+    }
+};
+
+// Wraps a closed generic UnityEngine.Events.UnityEvent`1<T0>. Generic event
+// arguments have backend-specific native layouts, so Invoke is not detoured on
+// either backend; listeners fire when Invoke() runs through the SDK.
+template <class T0> struct UnityEvent1 : Object {
+    UnityEvent1() = default;
+    explicit UnityEvent1(void *h) : Object(h) {
+    }
+    std::uint64_t AddListener(void (*callback)(T0)) {
+        if (!callback || !handle())
+            return 0;
+        return events_detail::listeners_add(handle(), reinterpret_cast<void *>(callback));
+    }
+    bool RemoveListener(std::uint64_t token) {
+        return events_detail::listeners_remove_token(handle(), token);
+    }
+    bool RemoveListener(void (*callback)(T0)) {
+        return events_detail::listeners_remove_callback(handle(), reinterpret_cast<void *>(callback));
+    }
+    void ClearListeners() {
+        events_detail::listeners_clear(handle());
+    }
+    void Invoke(T0 argument) const {
+        const std::vector<events_detail::EventListenerSlot> snapshot = events_detail::listeners_snapshot(handle());
+        for (const events_detail::EventListenerSlot &slot : snapshot) {
+            void (*callback)(T0) = reinterpret_cast<void (*)(T0)>(slot.callback);
+            callback(argument);
+        }
+        Call<void>("Invoke", argument);
+    }
+};
 struct Component : Object {
     Component() = default;
     explicit Component(void *h) : Object(h) {
@@ -161,6 +323,54 @@ struct Transform : Component {
     Transform Find(std::string_view path) const {
         return Call<Transform>("Find", path);
     }
+    Quaternion localRotation() const {
+        return GetProperty<Quaternion>("localRotation");
+    }
+    void set_localRotation(Quaternion q) const {
+        SetProperty("localRotation", q);
+    }
+    void SetPositionAndRotation(Vector3 position, Quaternion rotation) const {
+        CallExact<void>("SetPositionAndRotation", {"UnityEngine.Vector3", "UnityEngine.Quaternion"}, position, rotation);
+    }
+    void SetLocalPositionAndRotation(Vector3 localPosition, Quaternion localRotation) const {
+        CallExact<void>("SetLocalPositionAndRotation", {"UnityEngine.Vector3", "UnityEngine.Quaternion"}, localPosition,
+                        localRotation);
+    }
+    void Translate(Vector3 translation, Space relativeTo = Space::Self) const {
+        CallExact<void>("Translate", {"UnityEngine.Vector3", "UnityEngine.Space"}, translation,
+                        static_cast<int>(relativeTo));
+    }
+    void Rotate(Vector3 eulers, Space relativeTo = Space::Self) const {
+        CallExact<void>("Rotate", {"UnityEngine.Vector3", "UnityEngine.Space"}, eulers, static_cast<int>(relativeTo));
+    }
+    void RotateAround(Vector3 point, Vector3 axis, float angle) const {
+        CallExact<void>("RotateAround", {"UnityEngine.Vector3", "UnityEngine.Vector3", "System.Single"}, point, axis,
+                        angle);
+    }
+    void LookAt(Vector3 worldPosition) const {
+        CallExact<void>("LookAt", {"UnityEngine.Vector3"}, worldPosition);
+    }
+    void LookAt(Transform target) const {
+        CallExact<void>("LookAt", {"UnityEngine.Transform"}, target);
+    }
+    bool IsChildOf(Transform parent) const {
+        return Call<bool>("IsChildOf", parent);
+    }
+    void DetachChildren() const {
+        CallExact<void>("DetachChildren", {});
+    }
+    Vector3 TransformDirection(Vector3 direction) const {
+        return CallExact<Vector3>("TransformDirection", {"UnityEngine.Vector3"}, direction);
+    }
+    Vector3 InverseTransformDirection(Vector3 direction) const {
+        return CallExact<Vector3>("InverseTransformDirection", {"UnityEngine.Vector3"}, direction);
+    }
+    Vector3 TransformPoint(Vector3 position) const {
+        return CallExact<Vector3>("TransformPoint", {"UnityEngine.Vector3"}, position);
+    }
+    Vector3 InverseTransformPoint(Vector3 position) const {
+        return CallExact<Vector3>("InverseTransformPoint", {"UnityEngine.Vector3"}, position);
+    }
 };
 struct Camera : Behaviour {
     Camera() = default;
@@ -210,6 +420,51 @@ struct Camera : Behaviour {
     }
     Ray ScreenPointToRay(Vector3 screen) const {
         return CallExact<Ray>("ScreenPointToRay", {"UnityEngine.Vector3"}, screen);
+    }
+    bool orthographic() const {
+        return GetProperty<bool>("orthographic");
+    }
+    void set_orthographic(bool value) const {
+        SetProperty("orthographic", value);
+    }
+    float orthographicSize() const {
+        return GetProperty<float>("orthographicSize");
+    }
+    void set_orthographicSize(float value) const {
+        SetProperty("orthographicSize", value);
+    }
+    int cullingMask() const {
+        return GetProperty<int>("cullingMask");
+    }
+    void set_cullingMask(int value) const {
+        SetProperty("cullingMask", value);
+    }
+    int clearFlags() const {
+        return GetProperty<int>("clearFlags");
+    }
+    void set_clearFlags(int value) const {
+        SetProperty("clearFlags", value);
+    }
+    float depth() const {
+        return GetProperty<float>("depth");
+    }
+    void set_depth(float value) const {
+        SetProperty("depth", value);
+    }
+    Rect rect() const {
+        return GetProperty<Rect>("rect");
+    }
+    void set_rect(Rect value) const {
+        SetProperty("rect", value);
+    }
+    Rect pixelRect() const {
+        return GetProperty<Rect>("pixelRect");
+    }
+    void ResetProjectionMatrix() const {
+        CallExact<void>("ResetProjectionMatrix", {});
+    }
+    static int allCamerasCount() {
+        return detail::InvokeStatic<int>(CameraType, "get_allCamerasCount");
     }
 };
 struct Mesh : Object {
@@ -1326,11 +1581,11 @@ struct Button : Selectable {
     Image image() const {
         return GetProperty<Image>("image");
     }
-    Object onClick() const {
-        return GetProperty<Object>("onClick");
+    UnityEvent onClick() const {
+        return UnityEvent{GetProperty<Object>("onClick").handle()};
     }
     void Click() const {
-        onClick().Call<void>("Invoke");
+        onClick().Invoke();
     }
 };
 struct RawImage : Graphic {
@@ -1422,8 +1677,8 @@ struct Toggle : Selectable {
     void set_graphic(Graphic value) const {
         SetProperty("graphic", value);
     }
-    Object onValueChanged() const {
-        return GetProperty<Object>("onValueChanged");
+    UnityEvent1<bool> onValueChanged() const {
+        return UnityEvent1<bool>{GetProperty<Object>("onValueChanged").handle()};
     }
     void SetIsOnWithoutNotify(bool value) const {
         CallExact<void>("SetIsOnWithoutNotify", {"System.Boolean"}, value);
@@ -1466,8 +1721,8 @@ struct Slider : Selectable {
     void set_direction(SliderDirection value) const {
         SetProperty("direction", value);
     }
-    Object onValueChanged() const {
-        return GetProperty<Object>("onValueChanged");
+    UnityEvent1<float> onValueChanged() const {
+        return UnityEvent1<float>{GetProperty<Object>("onValueChanged").handle()};
     }
     void SetValueWithoutNotify(float value) const {
         CallExact<void>("SetValueWithoutNotify", {"System.Single"}, value);
@@ -1504,8 +1759,8 @@ struct Scrollbar : Selectable {
     void set_direction(ScrollbarDirection value) const {
         SetProperty("direction", value);
     }
-    Object onValueChanged() const {
-        return GetProperty<Object>("onValueChanged");
+    UnityEvent1<float> onValueChanged() const {
+        return UnityEvent1<float>{GetProperty<Object>("onValueChanged").handle()};
     }
     void SetValueWithoutNotify(float value) const {
         CallExact<void>("SetValueWithoutNotify", {"System.Single"}, value);
@@ -1539,8 +1794,8 @@ struct Dropdown : Selectable {
     RectTransform templateTransform() const {
         return GetProperty<RectTransform>("template");
     }
-    Object onValueChanged() const {
-        return GetProperty<Object>("onValueChanged");
+    UnityEvent1<int> onValueChanged() const {
+        return UnityEvent1<int>{GetProperty<Object>("onValueChanged").handle()};
     }
     void SetValueWithoutNotify(int value) const {
         CallExact<void>("SetValueWithoutNotify", {"System.Int32"}, value);
@@ -1601,11 +1856,11 @@ struct InputField : Selectable {
     Text textComponent() const {
         return GetProperty<Text>("textComponent");
     }
-    Object onValueChanged() const {
-        return GetProperty<Object>("onValueChanged");
+    UnityEvent1<std::string_view> onValueChanged() const {
+        return UnityEvent1<std::string_view>{GetProperty<Object>("onValueChanged").handle()};
     }
-    Object onEndEdit() const {
-        return GetProperty<Object>("onEndEdit");
+    UnityEvent1<std::string_view> onEndEdit() const {
+        return UnityEvent1<std::string_view>{GetProperty<Object>("onEndEdit").handle()};
     }
     void SetTextWithoutNotify(std::string_view value) const {
         CallExact<void>("SetTextWithoutNotify", {"System.String"}, value);
@@ -1657,11 +1912,11 @@ struct TmpInputField : Selectable {
     void set_readOnly(bool value) const {
         SetProperty("readOnly", value);
     }
-    Object onValueChanged() const {
-        return GetProperty<Object>("onValueChanged");
+    UnityEvent1<std::string_view> onValueChanged() const {
+        return UnityEvent1<std::string_view>{GetProperty<Object>("onValueChanged").handle()};
     }
-    Object onEndEdit() const {
-        return GetProperty<Object>("onEndEdit");
+    UnityEvent1<std::string_view> onEndEdit() const {
+        return UnityEvent1<std::string_view>{GetProperty<Object>("onEndEdit").handle()};
     }
     void SetTextWithoutNotify(std::string_view value) const {
         CallExact<void>("SetTextWithoutNotify", {"System.String"}, value);
@@ -1689,8 +1944,8 @@ struct TmpDropdown : Selectable {
     void set_value(int value) const {
         SetProperty("value", value);
     }
-    Object onValueChanged() const {
-        return GetProperty<Object>("onValueChanged");
+    UnityEvent1<int> onValueChanged() const {
+        return UnityEvent1<int>{GetProperty<Object>("onValueChanged").handle()};
     }
     void SetValueWithoutNotify(int value) const {
         CallExact<void>("SetValueWithoutNotify", {"System.Int32"}, value);
@@ -2433,6 +2688,35 @@ struct GameObject : Object {
         return has_method(GameObjectType, "get_scene", 0);
     }
     std::string tag() const;
+    void set_tag(std::string_view value) const {
+        SetProperty("tag", value);
+    }
+    int layer() const {
+        return GetProperty<int>("layer");
+    }
+    void set_layer(int value) const {
+        SetProperty("layer", value);
+    }
+    bool CompareTag(std::string_view tagName) const {
+        return Call<bool>("CompareTag", tagName);
+    }
+    static GameObject CreatePrimitive(PrimitiveType type) {
+        return detail::InvokeStatic<GameObject>(GameObjectType, "CreatePrimitive", static_cast<int>(type));
+    }
+    void SendMessage(std::string_view methodName, SendMessageOptions options = SendMessageOptions::RequireReceiver) const {
+        CallExact<void>("SendMessage", {"System.String", "UnityEngine.SendMessageOptions"}, methodName,
+                        static_cast<int>(options));
+    }
+    void SendMessageUpwards(std::string_view methodName,
+                            SendMessageOptions options = SendMessageOptions::RequireReceiver) const {
+        CallExact<void>("SendMessageUpwards", {"System.String", "UnityEngine.SendMessageOptions"}, methodName,
+                        static_cast<int>(options));
+    }
+    void BroadcastMessage(std::string_view methodName,
+                          SendMessageOptions options = SendMessageOptions::RequireReceiver) const {
+        CallExact<void>("BroadcastMessage", {"System.String", "UnityEngine.SendMessageOptions"}, methodName,
+                        static_cast<int>(options));
+    }
     template <class T> T GetComponent() const {
         return T{GetComponent(T::unity_type().image, T::unity_type().namespc, T::unity_type().name).handle()};
     }

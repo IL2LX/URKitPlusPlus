@@ -107,11 +107,92 @@ void probe_components(URK::Unity::GameObject object) {
     URK::Unity::Transform transform = object.GetComponent<URK::Unity::Transform>();
     (void)transform.position();
     transform.set_position(URK::Unity::Vector3{0.0f, 1.0f, 2.0f});
+    (void)transform.localRotation();
+    transform.set_localRotation(URK::Unity::Quaternion{0.0f, 0.0f, 0.0f, 1.0f});
+    transform.SetPositionAndRotation(URK::Unity::Vector3{0.0f, 0.0f, 0.0f},
+                                     URK::Unity::Quaternion{0.0f, 0.0f, 0.0f, 1.0f});
+    transform.SetLocalPositionAndRotation(URK::Unity::Vector3{0.0f, 0.0f, 0.0f},
+                                          URK::Unity::Quaternion{0.0f, 0.0f, 0.0f, 1.0f});
+    transform.Translate(URK::Unity::Vector3{1.0f, 0.0f, 0.0f}, URK::Unity::Space::World);
+    transform.Rotate(URK::Unity::Vector3{0.0f, 90.0f, 0.0f}, URK::Unity::Space::World);
+    transform.RotateAround(URK::Unity::Vector3{0.0f, 0.0f, 0.0f}, URK::Unity::Vector3{0.0f, 1.0f, 0.0f}, 45.0f);
+    transform.LookAt(URK::Unity::Vector3{0.0f, 0.0f, 10.0f});
+    transform.LookAt(transform.parent());
+    (void)transform.IsChildOf(transform.parent());
+    transform.DetachChildren();
+    (void)transform.TransformDirection(URK::Unity::Vector3{0.0f, 0.0f, 1.0f});
+    (void)transform.InverseTransformDirection(URK::Unity::Vector3{0.0f, 0.0f, 1.0f});
+    (void)transform.TransformPoint(URK::Unity::Vector3{0.0f, 0.0f, 1.0f});
+    (void)transform.InverseTransformPoint(URK::Unity::Vector3{0.0f, 0.0f, 1.0f});
     (void)object.GetComponentInChildren<URK::Unity::Camera>(true);
     (void)object.GetComponents<URK::Unity::Object>();
     (void)object.HasComponent<URK::Unity::Renderer>();
     (void)object.name();
     (void)object.activeInHierarchy();
+    object.set_tag("Player");
+    (void)object.layer();
+    object.set_layer(0);
+    (void)object.CompareTag("Player");
+    (void)URK::Unity::GameObject::CreatePrimitive(URK::Unity::PrimitiveType::Cube);
+    object.SendMessage("OnInteract");
+    object.SendMessage("OnInteract", URK::Unity::SendMessageOptions::DontRequireReceiver);
+    object.SendMessageUpwards("OnInteract");
+    object.BroadcastMessage("OnInteract");
+
+    URK::Unity::Camera camera = object.GetComponent<URK::Unity::Camera>();
+    (void)camera.orthographic();
+    camera.set_orthographic(false);
+    (void)camera.orthographicSize();
+    camera.set_orthographicSize(5.0f);
+    (void)camera.cullingMask();
+    camera.set_cullingMask(-5);
+    (void)camera.clearFlags();
+    (void)camera.depth();
+    camera.set_depth(0.0f);
+    (void)camera.rect();
+    camera.set_rect(URK::Unity::Rect{0.0f, 0.0f, 1.0f, 1.0f});
+    (void)camera.pixelRect();
+    camera.ResetProjectionMatrix();
+    (void)URK::Unity::Camera::allCamerasCount();
+
+    URK::Unity::Button button = object.GetComponent<URK::Unity::Button>();
+    URK::Unity::UnityEvent onClick = button.onClick();
+    const std::uint64_t onClickToken = onClick.AddListener([]() {});
+    onClick.RemoveListener(onClickToken);
+    onClick.RemoveListener([]() {});
+    onClick.Invoke();
+    onClick.ClearListeners();
+    button.Click();
+
+    URK::Unity::Toggle toggle = object.GetComponent<URK::Unity::Toggle>();
+    URK::Unity::UnityEvent1<bool> toggleChanged = toggle.onValueChanged();
+    toggleChanged.AddListener([](bool) {});
+    toggleChanged.Invoke(true);
+
+    URK::Unity::Slider slider = object.GetComponent<URK::Unity::Slider>();
+    URK::Unity::UnityEvent1<float> sliderChanged = slider.onValueChanged();
+    sliderChanged.AddListener([](float) {});
+    sliderChanged.Invoke(0.5f);
+
+    URK::Unity::Scrollbar scrollbar = object.GetComponent<URK::Unity::Scrollbar>();
+    URK::Unity::UnityEvent1<float> scrollbarChanged = scrollbar.onValueChanged();
+    (void)scrollbarChanged;
+
+    URK::Unity::Dropdown dropdown = object.GetComponent<URK::Unity::Dropdown>();
+    URK::Unity::UnityEvent1<int> dropdownChanged = dropdown.onValueChanged();
+    (void)dropdownChanged;
+
+    URK::Unity::InputField inputField = object.GetComponent<URK::Unity::InputField>();
+    URK::Unity::UnityEvent1<std::string_view> inputChanged = inputField.onValueChanged();
+    URK::Unity::UnityEvent1<std::string_view> inputEdited = inputField.onEndEdit();
+    (void)inputChanged;
+    (void)inputEdited;
+
+    URK::Unity::TmpInputField tmpInput = object.GetComponent<URK::Unity::TmpInputField>();
+    URK::Unity::UnityEvent1<std::string_view> tmpChanged = tmpInput.onValueChanged();
+    URK::Unity::UnityEvent1<std::string_view> tmpEdited = tmpInput.onEndEdit();
+    tmpChanged.AddListener([](std::string_view) {});
+    (void)tmpEdited;
 }
 
 void probe_scene_traversal() {
@@ -119,6 +200,9 @@ void probe_scene_traversal() {
     (void)URK::Unity::SceneManager::GetLoadedSceneRoots();
     (void)URK::Unity::SceneManager::FindSceneGameObjects(false);
     (void)URK::Unity::SceneManager::FindSceneGameObjects(true);
+    URK::Unity::SceneManager::LoadScene("MainMenu_Variation1");
+    URK::Unity::SceneManager::LoadScene(1);
+    (void)URK::Unity::SceneManager::sceneCountInBuildSettings();
 }
 
 void probe_stripped_member_detection() {
@@ -141,8 +225,98 @@ void probe_reflection(URK::Unity::Object target) {
 void probe_statics() {
     (void)URK::Unity::Time::deltaTime();
     URK::Unity::Time::set_timeScale(1.0f);
+    (void)URK::Unity::Time::timeAsDouble();
+    (void)URK::Unity::Time::fixedDeltaTime();
+    (void)URK::Unity::Time::unscaledTime();
+    (void)URK::Unity::Time::frameCount();
+    (void)URK::Unity::Time::realtimeSinceStartup();
+    (void)URK::Unity::Time::smoothDeltaTime();
+    (void)URK::Unity::Time::maximumDeltaTime();
+    (void)URK::Unity::Time::timeSinceLevelLoad();
+    (void)URK::Unity::Time::renderedFrameCount();
+    (void)URK::Unity::Time::captureFramerate();
     (void)URK::Unity::Screen::width();
+    (void)URK::Unity::Screen::fullScreen();
+    URK::Unity::Screen::set_fullScreen(false);
     (void)URK::Unity::Input::GetKey(URK::Unity::KeyCode::A);
+    (void)URK::Unity::Input::GetAxis("Horizontal");
+    (void)URK::Unity::Input::GetButton("Jump");
+    (void)URK::Unity::Input::mousePosition();
+    (void)URK::Unity::Input::mouseScrollDelta();
+    (void)URK::Unity::Input::anyKey();
+    (void)URK::Unity::Input::touchCount();
+    (void)URK::Unity::Application::dataPath();
+    (void)URK::Unity::Application::persistentDataPath();
+    (void)URK::Unity::Application::streamingAssetsPath();
+    (void)URK::Unity::Application::isPlaying();
+    (void)URK::Unity::Application::isEditor();
+    (void)URK::Unity::Application::platform();
+    (void)URK::Unity::Application::version();
+    (void)URK::Unity::Application::unityVersion();
+    (void)URK::Unity::Application::productName();
+    (void)URK::Unity::Application::companyName();
+    (void)URK::Unity::Application::targetFrameRate();
+    URK::Unity::Application::set_targetFrameRate(60);
+    URK::Unity::Application::Quit();
+    URK::Unity::Application::Quit(0);
+    URK::Unity::Application::OpenURL("https://example.com");
+    URK::Unity::PlayerPrefs::SetInt("score", 10);
+    URK::Unity::PlayerPrefs::SetFloat("volume", 0.5f);
+    URK::Unity::PlayerPrefs::SetString("name", "Biscuit");
+    (void)URK::Unity::PlayerPrefs::GetInt("score");
+    (void)URK::Unity::PlayerPrefs::GetInt("score", 5);
+    (void)URK::Unity::PlayerPrefs::GetFloat("volume");
+    (void)URK::Unity::PlayerPrefs::GetString("name");
+    (void)URK::Unity::PlayerPrefs::HasKey("score");
+    URK::Unity::PlayerPrefs::DeleteKey("score");
+    URK::Unity::PlayerPrefs::DeleteAll();
+    URK::Unity::PlayerPrefs::Save();
+    (void)URK::Unity::Cursor::visible();
+    URK::Unity::Cursor::set_visible(true);
+    (void)URK::Unity::Cursor::lockState();
+    URK::Unity::Cursor::set_lockState(0);
+    (void)URK::Unity::Physics::Raycast(URK::Unity::Vector3{0.0f, 0.0f, 0.0f},
+                                       URK::Unity::Vector3{0.0f, 0.0f, 1.0f});
+    (void)URK::Unity::Physics::Raycast(URK::Unity::Vector3{0.0f, 0.0f, 0.0f},
+                                       URK::Unity::Vector3{0.0f, 0.0f, 1.0f}, 100.0f);
+    (void)URK::Unity::Physics::Raycast(URK::Unity::Vector3{0.0f, 0.0f, 0.0f},
+                                       URK::Unity::Vector3{0.0f, 0.0f, 1.0f}, 100.0f, -5, 2);
+    (void)URK::Unity::Physics::SphereCast(URK::Unity::Vector3{0.0f, 0.0f, 0.0f}, 0.5f,
+                                          URK::Unity::Vector3{0.0f, 0.0f, 1.0f}, 100.0f);
+    (void)URK::Unity::Physics::SphereCast(URK::Unity::Vector3{0.0f, 0.0f, 0.0f}, 0.5f,
+                                          URK::Unity::Vector3{0.0f, 0.0f, 1.0f}, 100.0f, -5, 2);
+    (void)URK::Unity::Physics::OverlapSphere(URK::Unity::Vector3{0.0f, 0.0f, 0.0f}, 1.0f);
+    (void)URK::Unity::Resources::Load("Items/Sword");
+}
+
+void probe_fq_method_handler() {
+    // One-liner static calls resolved by full class name and cached arity.
+    (void)URK::Unity::InvokeStaticFq<double>("VRC.SDKBase.Networking", "GetServerTimeInSeconds");
+    (void)URK::Unity::InvokeStaticFq<float>("UnityEngine.Time", "get_deltaTime");
+    (void)URK::Unity::InvokeStaticFq<std::vector<URK::Unity::GameObject>>("UnityEngine.Object",
+                                                                          "FindObjectsOfType");
+
+    // Resolve once, invoke repeatedly; argc = -1 skips the arity mismatch check.
+    const URK::Unity::ResolvedMethod deltaTime =
+        URK::Unity::ResolvedMethod::resolve("UnityEngine.Time", "get_deltaTime");
+    (void)deltaTime.invoke<float>();
+    (void)deltaTime.call<float>(static_cast<void *>(nullptr));
+
+    const URK::Unity::ResolvedMethod resolveAny =
+        URK::Unity::ResolvedMethod::resolve("UnityEngine.Debug", "Log");
+    (void)resolveAny.invoke<void>("hello");
+
+    URK::Unity::Object target;
+    const URK::Unity::ResolvedMethod describe =
+        URK::Unity::ResolvedMethod::resolve("System.Object", "ToString");
+    (void)describe.call<std::string>(target);
+
+    const URK::Unity::ResolvedMethod exact = URK::Unity::ResolvedMethod::resolve_exact(
+        "UnityEngine.Debug", "Log", {"System.Object"});
+    (void)exact.invoke<void>("hello");
+    (void)exact.class_handle();
+    (void)exact.method_handle();
+    (void)exact.argc();
 }
 
 void keep_referenced(URK::Unity::GameObject object) {
@@ -152,6 +326,7 @@ void keep_referenced(URK::Unity::GameObject object) {
     probe_scene_traversal();
     probe_reflection(object);
     probe_statics();
+    probe_fq_method_handler();
 }
 
 } // namespace
