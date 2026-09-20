@@ -1683,5 +1683,975 @@ std::vector<T> StaticArrayCallFq(std::string_view className, std::string_view me
     void *array = InvokeStaticFq<void *>(className, methodName, std::forward<Args>(args)...);
     return detail::RootedObjectArray<T>::from_managed_array(array, "Unity FQN static array call").copy_items();
 }
+
+// ===========================================================================
+// MethodHandler
+//
+// IL2CPP-SDK compat surface. The SDK's MethodHandler::resolve() returns a
+// Method handle; the equivalent here is ResolvedMethod (same lookup: full
+// class name + method name + optional arity, cached). invoke_raw/invoke() add
+// the SDK's raw-parameter and typed-unboxing convenience on top of it.
+// ===========================================================================
+using detail::Backend;
+using detail::type_name_matches;
+class MethodHandler {
+  public:
+    MethodHandler() = delete;
+
+    static ResolvedMethod resolve(std::string_view className, std::string_view methodName, int argc = -1) {
+        return ResolvedMethod::resolve(className, methodName, argc);
+    }
+
+    static void *invoke_raw(const ResolvedMethod &method, void *obj, void **params = nullptr) {
+        if (!method) {
+            detail::set_error("Unity MethodHandler::invoke_raw failed: method has not been resolved");
+            return nullptr;
+        }
+        void *result = nullptr;
+        void *ex = nullptr;
+        if (!detail::Backend::runtime_invoke(method.method_handle(), obj, params, &result, &ex) || ex) {
+            detail::set_error("Unity MethodHandler::invoke_raw failed: runtime_invoke exception");
+            detail::append_backend_error();
+            return nullptr;
+        }
+        return result;
+    }
+
+    template <typename TReturn = void>
+    static TReturn invoke(const ResolvedMethod &method, void *obj, void **params = nullptr) {
+        if constexpr (std::is_void_v<TReturn>) {
+            invoke_raw(method, obj, params);
+        } else {
+            void *result = invoke_raw(method, obj, params);
+            if (!result)
+                return TReturn{};
+            if constexpr (std::is_pointer_v<TReturn>)
+                return reinterpret_cast<TReturn>(result);
+            else {
+                void *unboxed = detail::Backend::object_unbox(result);
+                return *reinterpret_cast<TReturn *>(unboxed ? unboxed : result);
+            }
+        }
+    }
+};
+
+// ===========================================================================
+// ClassResolver -- the IL2CPP-SDK reflection DSL port.
+//
+// Fluent queries over one class handle that validate against live metadata and
+// capture offsets / raw handles / native method pointers. Backend-neutral: all
+// metadata access goes through detail::Backend with capability gating (e.g.
+// toPtr() yields nullptr on backends that expose no method pointer). The SDK's
+// Deobfuscation integration and SEH guards are intentionally not brought over;
+// deobfuscate() is accepted for API parity but registers nothing.
+// ===========================================================================
+using ResolverTraceFn = void (*)(const char *msg);
+inline ResolverTraceFn g_resolverTrace = nullptr;
+
+inline void SetResolverTrace(ResolverTraceFn fn) {
+    g_resolverTrace = fn;
+}
+
+inline void ResolverTrace(const char *msg) {
+    if (g_resolverTrace)
+        g_resolverTrace(msg);
+}
+
+namespace reflection_detail {
+
+constexpr std::uint32_t kStaticMemberFlag = 0x0010u;
+
+inline std::string type_name_string(const void *type) {
+    if (!type)
+        return {};
+    char buffer[512]{};
+    return Backend::type_get_name(type, buffer, sizeof(buffer)) ? std::string(buffer) : std::string{};
+}
+
+inline std::string short_name(std::string_view name) {
+    const std::size_t pos = name.find_last_of(".+/");
+    return pos == std::string_view::npos ? std::string(name) : std::string(name.substr(pos + 1));
+}
+
+// Full normalized equality or short-name equality, mirroring the SDK's
+// TypeNameEquals.
+inline bool equal_requested(std::string_view actual, const char *requested) {
+    if (!requested || !*requested)
+        return false;
+    if (type_name_matches(actual, requested))
+        return true;
+    return type_name_matches(short_name(actual), requested);
+}
+
+inline bool type_matches_class(std::string_view typeName, const void *klass) {
+    if (!klass)
+        return false;
+    const char *nm = Backend::class_get_name(klass);
+    if (nm && equal_requested(typeName, nm))
+        return true;
+    const char *ns = Backend::class_get_namespace(klass);
+    if (ns && ns[0] && nm) {
+        const std::string full = std::string(ns) + "." + nm;
+        if (equal_requested(typeName, full.c_str()))
+            return true;
+    }
+    return false;
+}
+
+inline const void *method_param_type(const void *method, int index) {
+    return method && index >= 0 ? Backend::method_get_param_type(method, static_cast<std::uint32_t>(index)) : nullptr;
+}
+
+struct FieldDescriptor {
+    const void *klass = nullptr;
+    const void *field = nullptr;
+    bool is_static = false;
+    std::string type_name;
+};
+
+} // namespace reflection_detail
+
+class FieldQuery {
+    friend class ClassResolver;
+
+    const void *m_targetType = nullptr;
+    bool m_hasTypeFilter = false;
+    std::string m_typeName;
+    std::string m_name;
+    std::optional<bool> m_static;
+    bool m_selfType = false;
+    bool m_required = false;
+    int *m_offsetDest = nullptr;
+    void **m_ptrDest = nullptr;
+    void **m_fieldRawDest = nullptr;
+    std::string *m_nameDest = nullptr;
+    std::string m_label;
+    const void *m_matched = nullptr;
+
+  public:
+    FieldQuery &label(std::string l) {
+        m_label = std::move(l);
+        return *this;
+    }
+
+    std::string describe() const {
+        if (!m_label.empty())
+            return m_label;
+        if (!m_name.empty())
+            return m_name;
+        if (!m_typeName.empty())
+            return "field:" + m_typeName;
+        if (m_selfType)
+            return "field:self";
+        if (m_hasTypeFilter) {
+            const char *n = m_targetType ? Backend::class_get_name(m_targetType) : nullptr;
+            return std::string("field:") + (n ? n : "<null-type>");
+        }
+        return "field:?";
+    }
+
+    FieldQuery &byType(const void *t) {
+        m_targetType = t;
+        m_hasTypeFilter = true;
+        return *this;
+    }
+    FieldQuery &byTypeName(std::string_view n) {
+        m_typeName = n;
+        return *this;
+    }
+    FieldQuery &byName(std::string_view n) {
+        m_name = n;
+        return *this;
+    }
+    FieldQuery &isStatic() {
+        m_static = true;
+        return *this;
+    }
+    FieldQuery &notStatic() {
+        m_static = false;
+        return *this;
+    }
+    FieldQuery &isSelf() {
+        m_selfType = true;
+        return *this;
+    }
+    FieldQuery &required() {
+        m_required = true;
+        return *this;
+    }
+    FieldQuery &toOffset(int &dest) {
+        m_offsetDest = &dest;
+        return *this;
+    }
+    FieldQuery &toPtr(void *&dest) {
+        m_ptrDest = &dest;
+        return *this;
+    }
+    FieldQuery &toFieldRaw(void *&dest) {
+        m_fieldRawDest = &dest;
+        return *this;
+    }
+    FieldQuery &toName(std::string &dest) {
+        m_nameDest = &dest;
+        return *this;
+    }
+    FieldQuery &deobfuscate(std::string, std::string) {
+        return *this;
+    }
+
+    bool matches(const void *klass, const void *field, bool isStatic, std::string_view typeName) const {
+        if (m_matched)
+            return false;
+        if (!m_name.empty()) {
+            const char *n = Backend::field_get_name(field);
+            if (!n || m_name != n)
+                return false;
+        }
+        if (m_static.has_value() && m_static.value() != isStatic)
+            return false;
+        if (m_hasTypeFilter && !reflection_detail::type_matches_class(typeName, m_targetType))
+            return false;
+        if (m_selfType && !reflection_detail::type_matches_class(typeName, klass))
+            return false;
+        if (!m_typeName.empty() && !reflection_detail::equal_requested(typeName, m_typeName.c_str()))
+            return false;
+        return true;
+    }
+
+    bool valid() const {
+        return !m_required || m_matched != nullptr;
+    }
+    bool matched() const {
+        return m_matched != nullptr;
+    }
+
+    void capture(const void *field) {
+        m_matched = field;
+    }
+
+    void apply() const {
+        if (!m_matched)
+            return;
+        if (m_offsetDest)
+            *m_offsetDest = Backend::field_get_offset(m_matched);
+        if (m_ptrDest)
+            *m_ptrDest = const_cast<void *>(m_matched);
+        if (m_fieldRawDest)
+            *m_fieldRawDest = const_cast<void *>(m_matched);
+        if (m_nameDest) {
+            const char *n = Backend::field_get_name(m_matched);
+            *m_nameDest = n ? n : "";
+        }
+    }
+
+    void reset() {
+        m_matched = nullptr;
+    }
+};
+
+class MethodQuery {
+    friend class ClassResolver;
+
+    std::string m_name;
+    int m_paramCount = -1;
+    std::vector<std::pair<int, const void *>> m_paramTypes;
+    const void *m_returnType = nullptr;
+    bool m_hasReturnFilter = false;
+    bool m_collectAll = false;
+    bool m_required = false;
+    std::string m_label;
+    void **m_ptrDest = nullptr;
+    void **m_methodRawDest = nullptr;
+    std::vector<void *> *m_ptrListDest = nullptr;
+    std::vector<const void *> m_matched;
+
+  public:
+    MethodQuery &label(std::string l) {
+        m_label = std::move(l);
+        return *this;
+    }
+
+    std::string describe() const {
+        if (!m_label.empty())
+            return m_label;
+        if (!m_name.empty())
+            return m_name;
+        return "method:?";
+    }
+
+    MethodQuery &byName(std::string_view n) {
+        m_name = n;
+        return *this;
+    }
+    MethodQuery &withParams(int count) {
+        m_paramCount = count;
+        return *this;
+    }
+    MethodQuery &paramType(int index, const void *type) {
+        m_paramTypes.emplace_back(index, type);
+        return *this;
+    }
+    MethodQuery &returnType(const void *type) {
+        m_returnType = type;
+        m_hasReturnFilter = true;
+        return *this;
+    }
+    MethodQuery &collectAll() {
+        m_collectAll = true;
+        return *this;
+    }
+    MethodQuery &required() {
+        m_required = true;
+        return *this;
+    }
+    MethodQuery &toPtr(void *&dest) {
+        m_ptrDest = &dest;
+        return *this;
+    }
+    MethodQuery &toMethodRaw(void *&dest) {
+        m_methodRawDest = &dest;
+        return *this;
+    }
+    MethodQuery &toPtrList(std::vector<void *> &dest) {
+        m_ptrListDest = &dest;
+        m_collectAll = true;
+        return *this;
+    }
+    MethodQuery &deobfuscate(std::string, std::string) {
+        return *this;
+    }
+
+    bool matches(const void *method) const {
+        if (!m_collectAll && !m_matched.empty())
+            return false;
+        if (!m_name.empty()) {
+            const char *n = Backend::method_get_name(method);
+            if (!n || m_name != n)
+                return false;
+        }
+        if (m_paramCount >= 0 && static_cast<int>(Backend::method_get_param_count(method)) != m_paramCount)
+            return false;
+        for (const auto &entry : m_paramTypes) {
+            const void *pt = reflection_detail::method_param_type(method, entry.first);
+            const std::string pn = reflection_detail::type_name_string(pt);
+            if (pn.empty() || !reflection_detail::type_matches_class(pn, entry.second))
+                return false;
+        }
+        if (m_hasReturnFilter) {
+            const void *rt = Backend::method_get_return_type(method);
+            const std::string rn = reflection_detail::type_name_string(rt);
+            if (rn.empty() || !reflection_detail::type_matches_class(rn, m_returnType))
+                return false;
+        }
+        return true;
+    }
+
+    bool valid() const {
+        return !m_required || !m_matched.empty();
+    }
+    bool matched() const {
+        return !m_matched.empty();
+    }
+
+    void capture(const void *method) {
+        m_matched.push_back(method);
+    }
+
+    void apply() const {
+        if (!m_matched.empty()) {
+            if (m_ptrDest)
+                *m_ptrDest = Backend::method_pointer(m_matched[0]);
+            if (m_methodRawDest)
+                *m_methodRawDest = const_cast<void *>(m_matched[0]);
+        }
+        if (m_ptrListDest) {
+            m_ptrListDest->clear();
+            for (const void *m : m_matched)
+                m_ptrListDest->push_back(Backend::method_pointer(m));
+        }
+    }
+
+    void reset() {
+        m_matched.clear();
+    }
+};
+
+class PropertyQuery {
+    friend class ClassResolver;
+
+    const void *m_targetType = nullptr;
+    bool m_hasTypeFilter = false;
+    std::string m_typeName;
+    std::string m_name;
+    int m_index = 0;
+    bool m_requireSetter = false;
+    bool m_requireGetter = true;
+    std::optional<bool> m_static;
+    bool m_required = false;
+    std::string m_label;
+    void **m_getterPtrDest = nullptr;
+    void **m_setterPtrDest = nullptr;
+    void **m_getterRawDest = nullptr;
+    void **m_setterRawDest = nullptr;
+    std::string *m_nameDest = nullptr;
+    int m_seen = 0;
+    const void *m_matched = nullptr;
+
+  public:
+    PropertyQuery &label(std::string l) {
+        m_label = std::move(l);
+        return *this;
+    }
+
+    std::string describe() const {
+        if (!m_label.empty())
+            return m_label;
+        if (!m_name.empty())
+            return m_name;
+        if (!m_typeName.empty())
+            return "prop:" + m_typeName + "[" + std::to_string(m_index) + "]";
+        return "prop:?";
+    }
+
+    PropertyQuery &byType(const void *t) {
+        m_targetType = t;
+        m_hasTypeFilter = true;
+        return *this;
+    }
+    PropertyQuery &byTypeName(std::string_view n) {
+        m_typeName = n;
+        return *this;
+    }
+    PropertyQuery &byName(std::string_view n) {
+        m_name = n;
+        return *this;
+    }
+    PropertyQuery &atIndex(int i) {
+        m_index = i;
+        return *this;
+    }
+    PropertyQuery &isStatic() {
+        m_static = true;
+        return *this;
+    }
+    PropertyQuery &notStatic() {
+        m_static = false;
+        return *this;
+    }
+    PropertyQuery &hasSetter() {
+        m_requireSetter = true;
+        return *this;
+    }
+    PropertyQuery &allowNoGetter() {
+        m_requireGetter = false;
+        return *this;
+    }
+    PropertyQuery &required() {
+        m_required = true;
+        return *this;
+    }
+    PropertyQuery &toGetter(void *&dest) {
+        m_getterPtrDest = &dest;
+        return *this;
+    }
+    PropertyQuery &toSetter(void *&dest) {
+        m_setterPtrDest = &dest;
+        return *this;
+    }
+    PropertyQuery &toGetterRaw(void *&dest) {
+        m_getterRawDest = &dest;
+        return *this;
+    }
+    PropertyQuery &toSetterRaw(void *&dest) {
+        m_setterRawDest = &dest;
+        return *this;
+    }
+    PropertyQuery &toName(std::string &dest) {
+        m_nameDest = &dest;
+        return *this;
+    }
+    PropertyQuery &deobfuscate(std::string, std::string) {
+        return *this;
+    }
+
+    bool matches(const void *property) const {
+        if (m_matched)
+            return false;
+        const void *getter = Backend::property_get_get_method(property);
+        const void *setter = Backend::property_get_set_method(property);
+        if (m_requireGetter && !getter)
+            return false;
+        if (m_requireSetter && !setter)
+            return false;
+        if (m_static.has_value()) {
+            const void *accessor = getter ? getter : setter;
+            if (!accessor || Backend::method_is_static(accessor) != m_static.value())
+                return false;
+        }
+        if (!m_name.empty()) {
+            const char *n = Backend::property_get_name(property);
+            if (!n || m_name != n)
+                return false;
+        }
+        const std::string typeName =
+            getter ? reflection_detail::type_name_string(Backend::method_get_return_type(getter))
+                   : reflection_detail::type_name_string(reflection_detail::method_param_type(setter, 0));
+        if (m_hasTypeFilter && !reflection_detail::type_matches_class(typeName, m_targetType))
+            return false;
+        if (!m_typeName.empty() && !reflection_detail::equal_requested(typeName, m_typeName.c_str()))
+            return false;
+        return true;
+    }
+
+    void capture(const void *property) {
+        if (m_seen++ == m_index)
+            m_matched = property;
+    }
+
+    bool valid() const {
+        return !m_required || m_matched != nullptr;
+    }
+    bool matched() const {
+        return m_matched != nullptr;
+    }
+
+    void apply() const {
+        if (!m_matched)
+            return;
+        const void *getter = Backend::property_get_get_method(m_matched);
+        const void *setter = Backend::property_get_set_method(m_matched);
+        if (m_getterPtrDest && getter)
+            *m_getterPtrDest = Backend::method_pointer(getter);
+        if (m_setterPtrDest && setter)
+            *m_setterPtrDest = Backend::method_pointer(setter);
+        if (m_getterRawDest && getter)
+            *m_getterRawDest = const_cast<void *>(getter);
+        if (m_setterRawDest && setter)
+            *m_setterRawDest = const_cast<void *>(setter);
+        if (m_nameDest) {
+            const char *n = Backend::property_get_name(m_matched);
+            *m_nameDest = n ? n : "";
+        }
+    }
+
+    void reset() {
+        m_matched = nullptr;
+        m_seen = 0;
+    }
+};
+
+class FieldCounter {
+    friend class ClassResolver;
+
+    const void *m_targetType = nullptr;
+    bool m_hasTypeFilter = false;
+    std::string m_typeName;
+    std::optional<bool> m_static;
+    int m_count = 0;
+    int m_expectedMin = -1;
+    int m_expectedMax = -1;
+    int m_expectedExact = -1;
+
+  public:
+    FieldCounter &byType(const void *t) {
+        m_targetType = t;
+        m_hasTypeFilter = true;
+        return *this;
+    }
+    FieldCounter &byTypeName(std::string_view n) {
+        m_typeName = n;
+        return *this;
+    }
+    FieldCounter &isStatic() {
+        m_static = true;
+        return *this;
+    }
+    FieldCounter &notStatic() {
+        m_static = false;
+        return *this;
+    }
+    FieldCounter &expectExact(int n) {
+        m_expectedExact = n;
+        return *this;
+    }
+    FieldCounter &expectMin(int n) {
+        m_expectedMin = n;
+        return *this;
+    }
+    FieldCounter &expectMax(int n) {
+        m_expectedMax = n;
+        return *this;
+    }
+    FieldCounter &expectRange(int min, int max) {
+        m_expectedMin = min;
+        m_expectedMax = max;
+        return *this;
+    }
+
+    bool matches(const reflection_detail::FieldDescriptor &f) const {
+        if (m_static.has_value() && m_static.value() != f.is_static)
+            return false;
+        if (m_hasTypeFilter && !reflection_detail::type_matches_class(f.type_name, m_targetType))
+            return false;
+        if (!m_typeName.empty() && !reflection_detail::equal_requested(f.type_name, m_typeName.c_str()))
+            return false;
+        return true;
+    }
+
+    void increment() {
+        ++m_count;
+    }
+
+    bool valid() const {
+        if (m_expectedExact >= 0 && m_count != m_expectedExact)
+            return false;
+        if (m_expectedMin >= 0 && m_count < m_expectedMin)
+            return false;
+        if (m_expectedMax >= 0 && m_count > m_expectedMax)
+            return false;
+        return true;
+    }
+    int count() const {
+        return m_count;
+    }
+    void reset() {
+        m_count = 0;
+    }
+
+    std::string describe() const {
+        const std::string what =
+            !m_typeName.empty() ? m_typeName
+                                : (m_targetType ? std::string(Backend::class_get_name(m_targetType)) : std::string("?"));
+        return "count:" + what + "=" + std::to_string(m_count);
+    }
+};
+
+class IndexedFieldCollector {
+    friend class ClassResolver;
+
+    const void *m_targetType = nullptr;
+    bool m_hasTypeFilter = false;
+    std::string m_typeName;
+    std::optional<bool> m_static;
+    int m_requiredCount = 0;
+
+    struct Binding {
+        int index = 0;
+        int *offsetDest = nullptr;
+        void **ptrDest = nullptr;
+        void **fieldRawDest = nullptr;
+        std::string *nameDest = nullptr;
+        Binding(int i, int *offset, void **ptr, void **raw, std::string *name)
+            : index(i), offsetDest(offset), ptrDest(ptr), fieldRawDest(raw), nameDest(name) {}
+    };
+    std::vector<Binding> m_bindings;
+    std::vector<const void *> m_captured;
+
+  public:
+    IndexedFieldCollector &byType(const void *t) {
+        m_targetType = t;
+        m_hasTypeFilter = true;
+        return *this;
+    }
+    IndexedFieldCollector &byTypeName(std::string_view n) {
+        m_typeName = n;
+        return *this;
+    }
+    IndexedFieldCollector &isStatic() {
+        m_static = true;
+        return *this;
+    }
+    IndexedFieldCollector &notStatic() {
+        m_static = false;
+        return *this;
+    }
+    IndexedFieldCollector &requireCount(int n) {
+        m_requiredCount = n;
+        return *this;
+    }
+    IndexedFieldCollector &requireMinCount(int n) {
+        m_requiredCount = n;
+        return *this;
+    }
+
+    IndexedFieldCollector &bindOffset(int index, int &offsetDest) {
+        m_bindings.emplace_back(index, &offsetDest, nullptr, nullptr, nullptr);
+        return *this;
+    }
+    IndexedFieldCollector &bindPtr(int index, void *&ptrDest) {
+        m_bindings.emplace_back(index, nullptr, &ptrDest, nullptr, nullptr);
+        return *this;
+    }
+    IndexedFieldCollector &bindFieldRaw(int index, void *&dest) {
+        m_bindings.emplace_back(index, nullptr, nullptr, &dest, nullptr);
+        return *this;
+    }
+    IndexedFieldCollector &bind(int index, int &offsetDest, void *&ptrDest) {
+        m_bindings.emplace_back(index, &offsetDest, &ptrDest, nullptr, nullptr);
+        return *this;
+    }
+    IndexedFieldCollector &bind(int index, int &offsetDest, std::string &nameDest) {
+        m_bindings.emplace_back(index, &offsetDest, nullptr, nullptr, &nameDest);
+        return *this;
+    }
+    IndexedFieldCollector &bind(int index, void *&ptrDest, std::string &nameDest) {
+        m_bindings.emplace_back(index, nullptr, &ptrDest, nullptr, &nameDest);
+        return *this;
+    }
+
+    bool matches(const reflection_detail::FieldDescriptor &f) const {
+        if (m_static.has_value() && m_static.value() != f.is_static)
+            return false;
+        if (m_hasTypeFilter && !reflection_detail::type_matches_class(f.type_name, m_targetType))
+            return false;
+        if (!m_typeName.empty() && !reflection_detail::equal_requested(f.type_name, m_typeName.c_str()))
+            return false;
+        return true;
+    }
+
+    void capture(const void *field) {
+        m_captured.push_back(field);
+    }
+
+    bool valid() const {
+        return m_requiredCount <= 0 || static_cast<int>(m_captured.size()) >= m_requiredCount;
+    }
+    int collected() const {
+        return static_cast<int>(m_captured.size());
+    }
+
+    std::string describe() const {
+        const std::string what =
+            !m_typeName.empty() ? m_typeName
+                                : (m_targetType ? std::string(Backend::class_get_name(m_targetType)) : std::string("?"));
+        return "collect:" + what + " got " + std::to_string(m_captured.size()) + "/" +
+               std::to_string(m_requiredCount);
+    }
+
+    void apply() const {
+        for (const Binding &b : m_bindings) {
+            if (b.index < 0 || b.index >= static_cast<int>(m_captured.size()))
+                continue;
+            const void *field = m_captured[b.index];
+            if (b.offsetDest)
+                *b.offsetDest = Backend::field_get_offset(field);
+            if (b.ptrDest)
+                *b.ptrDest = const_cast<void *>(field);
+            if (b.fieldRawDest)
+                *b.fieldRawDest = const_cast<void *>(field);
+            if (b.nameDest) {
+                const char *n = Backend::field_get_name(field);
+                *b.nameDest = n ? n : "";
+            }
+        }
+    }
+
+    void reset() {
+        m_captured.clear();
+    }
+};
+
+class ClassResolver {
+    const void *m_klass = nullptr;
+    std::vector<FieldQuery> m_fieldQueries;
+    std::vector<MethodQuery> m_methodQueries;
+    std::vector<PropertyQuery> m_propertyQueries;
+    std::vector<FieldCounter> m_fieldCounters;
+    std::vector<IndexedFieldCollector> m_indexedCollectors;
+    std::vector<std::string> m_misses;
+    bool m_includeInherited = false;
+
+  public:
+    explicit ClassResolver(const void *klass) : m_klass(klass) {}
+
+    static ClassResolver by_name(std::string_view fullName) {
+        const std::pair<std::string, std::string> parts = detail::split_fqn(fullName);
+        const TypeRef type{std::string_view{}, parts.first, parts.second};
+        return ClassResolver(type.resolve_class());
+    }
+
+    FieldQuery &field() {
+        return m_fieldQueries.emplace_back();
+    }
+    MethodQuery &method() {
+        return m_methodQueries.emplace_back();
+    }
+    PropertyQuery &property() {
+        return m_propertyQueries.emplace_back();
+    }
+    FieldCounter &counter() {
+        return m_fieldCounters.emplace_back();
+    }
+    IndexedFieldCollector &collector() {
+        return m_indexedCollectors.emplace_back();
+    }
+
+    // get_fields() returns declared fields only, so inherited members are
+    // invisible without walking parents.
+    ClassResolver &includeInherited(bool enable = true) {
+        m_includeInherited = enable;
+        return *this;
+    }
+    ClassResolver &deobfuscate(std::string) {
+        return *this;
+    }
+
+    void reset() {
+        for (auto &q : m_fieldQueries)
+            q.reset();
+        for (auto &q : m_methodQueries)
+            q.reset();
+        for (auto &q : m_propertyQueries)
+            q.reset();
+        for (auto &c : m_fieldCounters)
+            c.reset();
+        for (auto &c : m_indexedCollectors)
+            c.reset();
+        m_misses.clear();
+    }
+
+    bool validate(bool collectMisses = false) {
+        if (!m_klass)
+            return false;
+        reset();
+
+        if (g_resolverTrace) {
+            char buf[256]{};
+            const char *ns = Backend::class_get_namespace(m_klass);
+            const char *nm = Backend::class_get_name(m_klass);
+            snprintf(buf, sizeof(buf), "validate klass=%p raw='%s%s%s' fQ=%zu mQ=%zu ctr=%zu coll=%zu", m_klass,
+                     ns ? ns : "", ns && ns[0] ? "." : "", nm ? nm : "<null>", m_fieldQueries.size(),
+                     m_methodQueries.size(), m_fieldCounters.size(), m_indexedCollectors.size());
+            g_resolverTrace(buf);
+        }
+
+        bool needsStatic = false;
+        for (const auto &q : m_fieldQueries)
+            needsStatic |= q.m_static.has_value();
+        for (const auto &c : m_fieldCounters)
+            needsStatic |= c.m_static.has_value();
+        for (const auto &c : m_indexedCollectors)
+            needsStatic |= c.m_static.has_value();
+
+        int depth = 0;
+        for (const void *cur = m_klass; cur && depth < 64;
+             cur = m_includeInherited ? Backend::class_get_parent(cur) : nullptr, ++depth) {
+            void *it = nullptr;
+            while (const void *field = Backend::class_get_fields(cur, &it)) {
+                reflection_detail::FieldDescriptor f;
+                f.klass = cur;
+                f.field = field;
+                f.is_static = Backend::field_is_static(field);
+                f.type_name = reflection_detail::type_name_string(Backend::field_get_type(field));
+                for (auto &counter : m_fieldCounters)
+                    if (counter.matches(f))
+                        counter.increment();
+                for (auto &coll : m_indexedCollectors)
+                    if (coll.matches(f))
+                        coll.capture(field);
+                for (auto &query : m_fieldQueries)
+                    if (query.matches(cur, field, f.is_static, f.type_name))
+                        query.capture(field);
+            }
+        }
+
+        bool ok = true;
+        auto check = [&](bool valid, auto &&describe) -> bool {
+            if (valid)
+                return true;
+            ok = false;
+            if (collectMisses)
+                m_misses.push_back(describe());
+            return false;
+        };
+
+        for (const auto &c : m_fieldCounters)
+            if (!check(c.valid(), [&] { return c.describe(); }) && !collectMisses)
+                return false;
+        for (const auto &c : m_indexedCollectors)
+            if (!check(c.valid(), [&] { return c.describe(); }) && !collectMisses)
+                return false;
+        for (const auto &q : m_fieldQueries)
+            if (!check(q.valid(), [&] { return q.describe(); }) && !collectMisses)
+                return false;
+
+        if (!m_propertyQueries.empty()) {
+            void *pit = nullptr;
+            while (const void *prop = Backend::class_get_properties(m_klass, &pit)) {
+                for (auto &query : m_propertyQueries)
+                    if (query.matches(prop))
+                        query.capture(prop);
+            }
+            for (const auto &q : m_propertyQueries)
+                if (!check(q.valid(), [&] { return q.describe(); }) && !collectMisses)
+                    return false;
+        }
+
+        if (!m_methodQueries.empty()) {
+            if (g_resolverTrace) {
+                char buf[160]{};
+                snprintf(buf, sizeof(buf), "  iter methods klass=%p", m_klass);
+                g_resolverTrace(buf);
+            }
+            void *mit = nullptr;
+            while (const void *meth = Backend::class_get_methods(m_klass, &mit)) {
+                for (auto &query : m_methodQueries)
+                    if (query.matches(meth))
+                        query.capture(meth);
+            }
+            for (const auto &q : m_methodQueries)
+                if (!check(q.valid(), [&] { return q.describe(); }) && !collectMisses)
+                    return false;
+        }
+
+        return ok;
+    }
+
+    void apply() {
+        for (const auto &q : m_fieldQueries)
+            q.apply();
+        for (const auto &q : m_methodQueries)
+            q.apply();
+        for (const auto &q : m_propertyQueries)
+            q.apply();
+        for (const auto &c : m_indexedCollectors)
+            c.apply();
+    }
+
+    bool resolve() {
+        if (!validate())
+            return false;
+        apply();
+        return true;
+    }
+
+    bool resolvePartial() {
+        const bool ok = validate(true);
+        apply();
+        return ok;
+    }
+
+    const std::vector<std::string> &misses() const {
+        return m_misses;
+    }
+
+    std::string missReport() const {
+        std::string out;
+        for (const auto &m : m_misses) {
+            if (!out.empty())
+                out += ", ";
+            out += m;
+        }
+        return out;
+    }
+
+    const void *klass() const {
+        return m_klass;
+    }
+
+    const void *raw() const {
+        return m_klass;
+    }
+};
 )URKUNITY";
 

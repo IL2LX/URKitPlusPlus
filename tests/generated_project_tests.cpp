@@ -319,6 +319,52 @@ void probe_fq_method_handler() {
     (void)exact.argc();
 }
 
+void probe_method_handler_and_resolver() {
+    // MethodHandler mirrors the IL2CPP-SDK static API over ResolvedMethod.
+    const URK::Unity::ResolvedMethod delta =
+        URK::Unity::MethodHandler::resolve("UnityEngine.Time", "get_deltaTime");
+    (void)URK::Unity::MethodHandler::invoke_raw(delta, nullptr);
+    (void)URK::Unity::MethodHandler::invoke<float>(delta, nullptr);
+    (void)URK::Unity::MethodHandler::invoke<void>(delta, nullptr);
+
+    // ClassResolver fluent DSL. Compile-time verification only; resolution of
+    // UnityEngine.UI.Button members against live metadata is a runtime concern
+    // exercised by mods.
+    URK::Unity::ClassResolver resolver = URK::Unity::ClassResolver::by_name("UnityEngine.UI.Button");
+    (void)resolver.klass();
+    (void)resolver.raw();
+
+    int onClickOffset = 0;
+    void *onClickPtr = nullptr;
+    std::string onClickName;
+    resolver.field().byName("m_OnClick").required().toOffset(onClickOffset).toPtr(onClickPtr).toName(onClickName)
+        .label("Button.m_OnClick");
+
+    int interactableOffset = 0;
+    std::string interactableName;
+    resolver.field().byName("m_Interactable").toOffset(interactableOffset).toName(interactableName)
+        .label("Selectable.m_Interactable");
+
+    void *onClickGetter = nullptr;
+    resolver.property().byName("onClick").required().toGetter(onClickGetter).label("Button.onClick");
+
+    int selectedColorOffset = 0;
+    resolver.counter().byTypeName("UnityEngine.UI.ColorBlock").expectExact(1);
+    resolver.collector().byTypeName("UnityEngine.UI.ColorBlock").requireCount(1).bindOffset(0, selectedColorOffset);
+    (void)selectedColorOffset;
+
+    std::vector<void *> pointerClickMethods;
+    resolver.method().byName("OnPointerClick").collectAll().toPtrList(pointerClickMethods).label("Button.OnPointerClick");
+
+    resolver.resolvePartial();
+    (void)resolver.missReport();
+
+    URK::Unity::ClassResolver objectResolver = URK::Unity::ClassResolver::by_name("UnityEngine.Object");
+    void *destroyRaw = nullptr;
+    objectResolver.method().byName("Destroy").withParams(1).required().toMethodRaw(destroyRaw).label("Object.Destroy");
+    (void)destroyRaw;
+}
+
 void keep_referenced(URK::Unity::GameObject object) {
     probe_object_finders();
     probe_unqualified_type_resolution();
@@ -327,6 +373,7 @@ void keep_referenced(URK::Unity::GameObject object) {
     probe_reflection(object);
     probe_statics();
     probe_fq_method_handler();
+    probe_method_handler_and_resolver();
 }
 
 } // namespace

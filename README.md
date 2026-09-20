@@ -59,6 +59,34 @@ project.
 Put the proxy DLL next to the game executable, and built mods in the game's
 `Mods` directory. Only install one proxy, and don't rename it.
 
+## Reflection DSL in generated projects
+
+The generated Unity SDK now ships the IL2CPP-SDK reflection DSL, working on
+both Mono and IL2CPP backends through one backend-neutral `detail::Backend`.
+
+- **`MethodHandler`** with `ResolvedMethod`: resolve a managed method once from
+  a dot-qualified class name (`MethodHandler::resolve("UnityEngine.Time",
+  "get_deltaTime")` or the exact-signature form), cache the handle, and invoke
+  it per frame with `invoke_raw`/`invoke<T>` for statics or a target for
+  instance calls — no repeated metadata walks.
+- **`ClassResolver`**: a fluent query builder over a single class handle that
+  validates against live metadata and captures offsets, raw handles, and
+  native method pointers. Starts from a handle or by name, then chains
+  `field()`, `method()`, `property()`, `counter()`, and `collector()` queries
+  with `byName`/`byTypeName`/`byType`, `required()`, `toOffset()`, `toPtr()`,
+  `toName()`, `toGetter()`/`toSetter()`, and `collectAll()`/`toPtrList()`.
+  Options like `.field().byName("m_OnClick").required().toOffset(off).toPtr(p)`
+  mirror the SDK's `FieldQuery`/`MethodQuery`/`PropertyQuery`/`FieldCounter`/
+  `IndexedFieldCollector` API. `validate()` reports required-member misses,
+  `resolvePartial()` applies whatever matched, and `missReport()` returns the
+  failures.
+- **`SetResolverTrace(fn)`**: install a callback to log each resolver's
+  validation/iteration steps for debugging.
+
+Deobfuscation-aware name resolution and the SDK's SEH guards are handled by
+the existing deobfuscation pipeline rather than replicated inside the DSL;
+`deobfuscate()` is accepted for API parity but registers nothing.
+
 ## Quick start
 
 ```powershell

@@ -120,11 +120,23 @@ using Vector3 = URK::Unity::Vector3;
 using Vector3Int = URK::Unity::Vector3Int;
 using Vector4 = URK::Unity::Vector4;
 
+using MethodHandler = URK::Unity::MethodHandler;
+using ClassResolver = URK::Unity::ClassResolver;
+using FieldQuery = URK::Unity::FieldQuery;
+using MethodQuery = URK::Unity::MethodQuery;
+using PropertyQuery = URK::Unity::PropertyQuery;
+using FieldCounter = URK::Unity::FieldCounter;
+using IndexedFieldCollector = URK::Unity::IndexedFieldCollector;
+using ResolverTraceFn = URK::Unity::ResolverTraceFn;
+
 inline const char *last_error() {
     return URK::Unity::last_error();
 }
 inline void clear_error() {
     URK::Unity::clear_error();
+}
+inline void SetResolverTrace(ResolverTraceFn fn) {
+    URK::Unity::SetResolverTrace(fn);
 }
 inline bool is_main_thread() {
     return URK::Unity::is_main_thread();

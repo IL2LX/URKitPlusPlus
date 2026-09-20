@@ -962,8 +962,60 @@ struct Backend {
         << methodObjectHelper << methodParameterCountHelper << valueBoxHelper << R"URKUNITY(
     static std::int64_t string_length(void* string) { return static_cast<std::int64_t>(URK::)URKUNITY"
         << backendNs << R"URKUNITY(::string_length(static_cast<URK::)URKUNITY" << backendNs
-        << R"URKUNITY(::String*>(string)));
-}
+        << R"URKUNITY(::String*>(string))); }
+    static const void* class_get_fields(const void* klass, void** iterator) { return klass ? URK::)URKUNITY"
+        << backendNs << R"URKUNITY(::class_get_fields(static_cast<const URK::)URKUNITY" << backendNs
+        << R"URKUNITY(::Class*>(klass), iterator) : nullptr; }
+    static const void* class_get_properties(const void* klass, void** iterator) { return klass ? URK::)URKUNITY"
+        << backendNs << R"URKUNITY(::class_get_properties(static_cast<const URK::)URKUNITY" << backendNs
+        << R"URKUNITY(::Class*>(klass), iterator) : nullptr; }
+    static const char* property_get_name(const void* property) { return property ? URK::)URKUNITY"
+        << backendNs << R"URKUNITY(::property_get_name(static_cast<const URK::)URKUNITY" << backendNs
+        << R"URKUNITY(::Property*>(property)) : nullptr; }
+    static const void* property_get_get_method(const void* property) { return property ? URK::)URKUNITY"
+        << backendNs << R"URKUNITY(::property_get_get_method(static_cast<const URK::)URKUNITY" << backendNs
+        << R"URKUNITY(::Property*>(property)) : nullptr; }
+    static const void* property_get_set_method(const void* property) { return property ? URK::)URKUNITY"
+        << backendNs << R"URKUNITY(::property_get_set_method(static_cast<const URK::)URKUNITY" << backendNs
+        << R"URKUNITY(::Property*>(property)) : nullptr; }
+    static const char* field_get_name(const void* field) { return field ? URK::)URKUNITY"
+        << backendNs << R"URKUNITY(::field_get_name(static_cast<const URK::)URKUNITY" << backendNs
+        << R"URKUNITY(::Field*>(field)) : nullptr; }
+    static const void* field_get_type(const void* field) { return field ? URK::)URKUNITY"
+        << backendNs << R"URKUNITY(::field_get_type(static_cast<const URK::)URKUNITY" << backendNs
+        << R"URKUNITY(::Field*>(field)) : nullptr; }
+    static std::uint32_t field_get_flags(const void* field) { return field ? URK::)URKUNITY"
+        << backendNs << R"URKUNITY(::field_get_flags(static_cast<const URK::)URKUNITY" << backendNs
+        << R"URKUNITY(::Field*>(field)) : 0; }
+    static bool field_is_static(const void* field) { return (field_get_flags(field) & 0x0010u) != 0; }
+    static int field_get_offset(const void* field) { return field ? URK::)URKUNITY"
+        << (mono
+                ? "mono::field_get_offset(static_cast<const URK::mono::Field*>(field))"
+                : "il2cpp::field_offset(static_cast<const URK::il2cpp::Field*>(field))")
+        << R"URKUNITY( : -1; }
+    static const void* method_get_param_type(const void* method, std::uint32_t index) { return method ? URK::)URKUNITY"
+        << (mono
+                ? "mono::method_get_param_type(static_cast<const URK::mono::Method*>(method), index)"
+                : "il2cpp::method_get_param(static_cast<const URK::il2cpp::Method*>(method), index)")
+        << R"URKUNITY( : nullptr; }
+    static const void* method_get_return_type(const void* method) { return method ? URK::)URKUNITY"
+        << backendNs << R"URKUNITY(::method_get_return_type(static_cast<const URK::)URKUNITY" << backendNs
+        << R"URKUNITY(::Method*>(method)) : nullptr; }
+    static std::uint32_t method_get_flags(const void* method, std::uint32_t* iflags) { return method ? URK::)URKUNITY"
+        << backendNs << R"URKUNITY(::method_get_flags(static_cast<const URK::)URKUNITY" << backendNs
+        << R"URKUNITY(::Method*>(method), iflags) : 0; }
+    static bool method_is_static(const void* method) {
+        std::uint32_t iflags = 0;
+        return (method_get_flags(method, &iflags) & 0x0010u) != 0;
+    }
+    static void* method_pointer(const void* method) { return )URKUNITY"
+        << (mono
+                ? "(void)method, nullptr; }"
+                : "method ? URK::il2cpp::method_pointer(static_cast<const URK::il2cpp::Method*>(method)) : nullptr; }")
+        << R"URKUNITY(    static bool type_get_name(const void* type, char* output, std::size_t outputSize) {
+        return type && URK::)URKUNITY"
+        << backendNs << R"URKUNITY(::type_get_name(static_cast<const URK::)URKUNITY" << backendNs
+        << R"URKUNITY(::Type*>(type), output, outputSize); }
 }
 ;
 
