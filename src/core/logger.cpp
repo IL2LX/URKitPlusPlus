@@ -179,7 +179,13 @@ void Log_Banner() {
         R"( ##    ##  ##  "##m  ##  ##m      ##       ##      """##"""  """##""" )",
         R"( "##mm##"  ##    ##  ##   ##m  mmm##mmm    ##mmm      ##        ##    )",
         R"(   """"    ""    """ ""    ""  """"""""     """"                      )",
+        R"(> Lurid Lane (Official URKit Server): discord.gg/sje8PxVmdw           )",
+        R"(> RosaHub (URKit++ Server): discord.gg/MkfkXwmjU5                     )",
         R"(Made By Jadis0x -------------------------------------- Modified by IL2)",
+        R"(=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-)",
+        R"( IF YOU PAID FOR THIS SOFTWARE/RECEIVED IT IN A BUNDLE, YOU HAVE BEEN 
+ SCAMMED AND SHOULD DEMAND YOUR MONEY BACK IMMEDIATELY!)",
+        R"(=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-)",
     };
     constexpr WORD kBannerColor = FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
 
