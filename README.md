@@ -91,7 +91,8 @@ both Mono and IL2CPP backends through one backend-neutral `detail::Backend`.
 
 Deobfuscation-aware name resolution and the SDK's SEH guards are handled by
 the existing deobfuscation pipeline rather than replicated inside the DSL;
-`deobfuscate()` is accepted for API parity but registers nothing.
+`deobfuscate()` is accepted for API parity but registers nothing. Full guide:
+[docs/REFLECTION_DSL.md](docs/REFLECTION_DSL.md).
 
 ## Quick start
 

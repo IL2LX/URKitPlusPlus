@@ -1233,6 +1233,11 @@ The rest of the inspection helpers:
 `ValueInfo` comes back tagged, not typed: check `readable` and `kind` before
 you treat it as an integer, float, string, or object.
 
+When you want to bind members by name and keep them — offsets, native method
+pointers, resolved method handles — use the reflection DSL
+(`MethodHandler`/`ResolvedMethod`/`ClassResolver`) instead of ad-hoc dumps. See
+[docs/REFLECTION_DSL.md](REFLECTION_DSL.md).
+
 ## 8.2 Everyday Unity helpers
 
 Your generated `sdk/unity/unity_components.h` is the real source of truth for
