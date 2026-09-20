@@ -37,6 +37,12 @@ ImGui) works the same.
 - **Reverse name lookups**: `find_class`/`AddComponent` resolve deobfuscated
   names to the runtime's obfuscated metadata key, so component-by-real-name
   works even for classes only described by the map.
+- **Reflection DSL in generated projects**: the generated Unity SDK ships the
+  IL2CPP-SDK `MethodHandler`/`ClassResolver` reflection API — cached
+  `ResolvedMethod` handles (`MethodHandler::resolve`/`invoke`), and the fluent
+  `ClassResolver` query DSL (`field()`/`method()`/`property()`/`counter()`/
+  `collector()` with `toOffset`/`toPtr`/`required`), working on both Mono and
+  IL2CPP. Details below.
 
 Example symbol file: [docs/example_symbols.json](docs/example_symbols.json).
 
