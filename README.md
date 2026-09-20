@@ -1,7 +1,7 @@
-<img src="https://repository-images.githubusercontent.com/1373106960/903443b3-3874-4f0c-bd0f-b1adff366aaf" width="950">
+<img src="https://images-ext-1.discordapp.net/external/uFJStwAB9SGTKPgCxhglvA7OrP3Bk0fdli4p7trdp0s/https/repository-images.githubusercontent.com/1373106960/7860043a-3b25-4388-b188-a6afa986a53c?format=webp" width="950">
 
 URKit++ is a fork of
-[URKit](https://github.com/Jadis0x/URKit) that adds **deobfuscation support**:
+[URKit](https://github.com/Jadis0x/URKit) that adds **deobfuscation support**: 
 it can read a `DeobfuscationMap.json`, load custom export-name maps for
 UnityPlayer, and dump rename maps from live IL2CPP metadata. Everything from
 upstream URKit (Unity object access, managed calls, hooks, lifecycle, network,
