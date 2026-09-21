@@ -13,19 +13,19 @@ struct VRCPlayerApi : Unity::Object {
 	// --- Fields
 
 	bool islocal() const {
-		return GetProperty<bool>("isLocal");
+		return GetField<bool>("isLocal");
 	}
 
 	std::string GetDisplayName() const {
-		return Call<std::string>("displayName");
+		return GetField<std::string>("displayName");
 	}
 
 	void SetDisplayName(const std::string& name) const {
-		Call<std::string>("displayName", name);
+		SetField<std::string>("displayName", name);
 	}
 
     Unity::GameObject GameObject() const {
-        return GetProperty<Unity::GameObject>("gameObject");
+        return GetField<Unity::GameObject>("gameObject");
     }
 
 	// --- properties
