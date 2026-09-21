@@ -22,6 +22,7 @@ inline VRCPlayerApi InstanceOwner() { return d::InvokeStatic<VRCPlayerApi>(T, "g
 inline bool IsMaster() { return d::InvokeStatic<bool>(T, "get_IsMaster"); }
 inline bool IsNetworkSettled() { return d::InvokeStatic<bool>(T, "get_IsNetworkSettled"); }
 inline int ServerTimeMs() { return d::InvokeStatic<int>(T, "GetServerTimeInMilliseconds"); }
+inline void GoToRoom(std::string roomId) { d::InvokeStatic<void>(T, "GoToRoom", roomId); }
 
 // one GameObject
 inline VRCPlayerApi GetOwner(Unity::GameObject o) { return d::InvokeStatic<VRCPlayerApi>(T, "GetOwner", o); }
@@ -36,8 +37,6 @@ inline void SetOwner(VRCPlayerApi p, Unity::GameObject o) {
 inline std::vector<Unity::GameObject> PlayerObjects(VRCPlayerApi p) {
     return d::StaticArrayCall<Unity::GameObject>(T, "GetPlayerObjects", p);
 }
-}
-
-}
+}}
 )URKVRCNETWORKING";
 }
