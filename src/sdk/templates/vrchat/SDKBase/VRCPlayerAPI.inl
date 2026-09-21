@@ -47,6 +47,25 @@ struct VRCPlayerApi : Unity::Object {
 		return URK::Unity::detail::InvokeStatic<VRCPlayerApi>(unity_type(), "GetPlayerById", playerId);
 	}
 
+	// Managed return type: System.Collections.Generic.List<VRC.SDKBase.VRCPlayerApi>
+	static std::vector<VRCPlayerApi> GetAllPlayers() {
+		std::vector<VRCPlayerApi> players;
+		const Unity::Object list =
+		    URK::Unity::detail::InvokeStatic<Unity::Object>(unity_type(), "get_AllPlayers");
+		if (!list)
+			return players;
+		const int count = list.Call<int>("get_Count");
+		if (count <= 0)
+			return players;
+		players.reserve(static_cast<std::size_t>(count));
+		for (int i = 0; i < count; ++i) {
+			const VRCPlayerApi player = list.CallExact<VRCPlayerApi>("get_Item", { "System.Int32" }, i);
+			if (player)
+				players.push_back(player);
+		}
+		return players;
+	}
+
 	bool IsOwner(Unity::GameObject obj) {
 		return URK::Unity::detail::InvokeStatic<bool>(unity_type(), "IsOwner", obj);
 	}
