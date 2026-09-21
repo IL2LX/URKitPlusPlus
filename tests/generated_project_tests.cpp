@@ -365,6 +365,30 @@ void probe_method_handler_and_resolver() {
     (void)destroyRaw;
 }
 
+void probe_sprite_loading() {
+    const URK::Unity::Texture2D created = URK::Unity::Texture2D::Create(2, 2);
+    (void)created;
+    (void)URK::Unity::Texture2D::Create();
+    (void)created.LoadImage(reinterpret_cast<void *>(0x1));
+    (void)created.LoadImage(reinterpret_cast<void *>(0x1), true);
+    URK::Unity::Texture2D fromFile = URK::Unity::Texture2D::LoadFromFile("C:\\test.png");
+    (void)fromFile;
+
+    const URK::Unity::Sprite sprite = URK::Unity::Sprite::LoadFromFile("C:\\test.png");
+    (void)sprite;
+    (void)sprite.GetTexture();
+    (void)sprite.GetRect();
+    (void)sprite.GetPivot();
+    (void)sprite.GetBorder();
+    (void)sprite.GetPixelsPerUnit();
+    (void)sprite.GetPacked();
+    (void)URK::Unity::Sprite::Create(created.handle(), URK::Unity::Rect{0.0f, 0.0f, 2.0f, 2.0f},
+                                     URK::Unity::Vector2{0.5f, 0.5f});
+    (void)URK::Unity::Sprite::Create(created.handle(), URK::Unity::Rect{0.0f, 0.0f, 2.0f, 2.0f},
+                                     URK::Unity::Vector2{0.5f, 0.5f}, 100.0f, 0,
+                                     URK::Unity::Sprite::MeshType::FullRect);
+}
+
 void keep_referenced(URK::Unity::GameObject object) {
     probe_object_finders();
     probe_unqualified_type_resolution();
@@ -374,6 +398,7 @@ void keep_referenced(URK::Unity::GameObject object) {
     probe_statics();
     probe_fq_method_handler();
     probe_method_handler_and_resolver();
+    probe_sprite_loading();
 }
 
 } // namespace
@@ -391,6 +416,152 @@ extern "C" int urk_il2cpp_helper_probe(void *target) {
     return URK::il2cpp::helpers::is_valid_icall_target(target) ? 1 : 0;
 }
 )PROBE";
+
+constexpr std::string_view kVrcSdkBaseProbeSource = R"PROBE(
+#include "sdk/vrchat/SDKBase/Networking.h"
+
+#include <string>
+#include <vector>
+
+namespace {
+
+void probe_vrc_sdkbase() {
+    VRC::SDKBase::VRCPlayerApi local = VRC::SDKBase::Networking::LocalPlayer();
+    (void)local;
+    (void)VRC::SDKBase::Networking::Master();
+    (void)VRC::SDKBase::Networking::InstanceOwner();
+    (void)VRC::SDKBase::Networking::IsMaster();
+    (void)VRC::SDKBase::Networking::IsNetworkSettled();
+    (void)VRC::SDKBase::Networking::ServerTimeMs();
+    (void)VRC::SDKBase::Networking::GetOwner(URK::Unity::GameObject{nullptr});
+    (void)VRC::SDKBase::Networking::IsOwner(URK::Unity::GameObject{nullptr});
+    (void)VRC::SDKBase::Networking::IsObjectReady(URK::Unity::GameObject{nullptr});
+    (void)VRC::SDKBase::Networking::UniqueName(URK::Unity::GameObject{nullptr});
+    VRC::SDKBase::Networking::SetOwner(local, URK::Unity::GameObject{nullptr});
+    (void)VRC::SDKBase::Networking::PlayerObjects(local);
+    (void)VRC::SDKBase::kNetworking;
+    (void)VRC::SDKBase::VRCPlayerApi::unity_type();
+    (void)Unity::last_error();
+    Unity::clear_error();
+}
+
+void keep_referenced() {
+    probe_vrc_sdkbase();
+}
+
+} // namespace
+
+extern "C" void urk_generated_vrc_probe() {
+    keep_referenced();
+}
+)PROBE";
+
+constexpr std::string_view kModulesProbeSource = R"PROBE(
+#include "mod/modules/modules.cpp"
+
+#include <cstring>
+#include <cstdio>
+
+namespace {
+
+struct ProbeModule : Modules::Module {
+    ProbeModule() : Modules::Module("Probe Module", "probe description", Modules::Category::Movements) {}
+
+    int updates = 0;
+    int update01s = 0;
+    int update05s = 0;
+    int renders = 0;
+    int menuRenders = 0;
+    int onEnables = 0;
+    int onDisables = 0;
+    int sceneLoads = 0;
+    int sceneChanges = 0;
+
+    void OnEnable() override { ++onEnables; }
+    void OnDisable() override { ++onDisables; }
+    void OnUpdate(float) override { ++updates; }
+    void OnUpdate01(float) override { ++update01s; }
+    void OnUpdate05(float) override { ++update05s; }
+    void OnRender() override { ++renders; }
+    void InMenuRender() override { ++menuRenders; }
+    void OnSceneLoad(const char *, int) override { ++sceneLoads; }
+    void OnSceneChanged(const char *, const char *) override { ++sceneChanges; }
+};
+
+ProbeModule g_probe;
+
+void probe_categorized_modules() {
+    // metadata
+    std::strlen(g_probe.name());
+    std::strlen(g_probe.description());
+    std::strlen(Modules::category_name(g_probe.category()));
+    std::strlen(Modules::category_name(Modules::Category::Visuals));
+    std::strlen(Modules::category_name(Modules::Category::Movements));
+
+    // registry
+    Modules::System::Register(&g_probe);
+    Modules::System::Register(&g_probe); // dedupe
+    const int before = Modules::System::count();
+    (void)Modules::System::module(0);
+    (void)Modules::System::module(50); // out of range -> nullptr
+    (void)Modules::System::count(Modules::Category::Movements);
+    (void)Modules::System::count(Modules::Category::Visuals);
+    (void)Modules::System::enabled_count();
+    (void)Modules::System::enabled_count(Modules::Category::Movements);
+
+    // disabled: no update/render, but scene events are still delivered
+    Modules::System::Toggle(&g_probe); // enabled -> disabled, fires OnDisable
+    Modules::System::Tick(0.1f);
+    Modules::System::Render();
+    Modules::System::MenuRender();
+    Modules::System::SceneLoad("VRChat_Home", 1);
+    Modules::System::SceneChanged("VRChat_Home", "SomeWorld");
+    if (g_probe.updates != 0 || g_probe.renders != 0 || g_probe.menuRenders != 0 ||
+        g_probe.sceneLoads != 1 || g_probe.sceneChanges != 1) {
+        std::printf("FAILED: disabled module leaked update/render or skipped scene event\n");
+    }
+
+    // re-enable: update and renders resume
+    Modules::System::Toggle(&g_probe); // disabled -> enabled, fires OnEnable
+    Modules::System::EnableAll();      // no-op (stays enabled)
+    Modules::System::DisableAll();     // enabled -> disabled, fires OnDisable
+    Modules::System::EnableAll();      // disabled -> enabled, fires OnEnable
+    Modules::System::Tick(0.1f);
+    Modules::System::Render();
+    Modules::System::MenuRender();
+    Modules::System::SceneLoad("VRChat_Home", 2);
+    Modules::System::SceneChanged("VRChat_Home", "OtherWorld");
+
+    Modules::System::Unregister(&g_probe);
+    Modules::System::Unregister(&g_probe); // safe no-op
+    const int after = Modules::System::count();
+
+    const bool ok = before == 1 && after == 0 && g_probe.updates == 1 &&
+                    g_probe.update01s == 1 && g_probe.update05s == 0 &&
+                    g_probe.renders == 1 && g_probe.menuRenders == 1 &&
+                    g_probe.sceneLoads == 2 && g_probe.sceneChanges == 2 &&
+                    g_probe.onEnables == 3 && g_probe.onDisables == 3;
+    if (!ok) {
+        std::printf("FAILED: module system probe invariants (updates=%d u01=%d u05=%d "
+                    "renders=%d menu=%d loads=%d changes=%d en=%d dis=%d)\n",
+                    g_probe.updates, g_probe.update01s, g_probe.update05s, g_probe.renders,
+                    g_probe.menuRenders, g_probe.sceneLoads, g_probe.sceneChanges,
+                    g_probe.onEnables, g_probe.onDisables);
+    }
+}
+
+void keep_referenced() {
+    probe_categorized_modules();
+}
+
+} // namespace
+
+extern "C" void urk_generated_modules_probe() {
+    keep_referenced();
+}
+)PROBE";
+
+
 
 struct GeneratedProject {
     fs::path root;
@@ -481,7 +652,13 @@ void CheckLayout(const GeneratedProject &project) {
         "sdk/unity/unity_invoke.h",
         "sdk/unity/unity_components.h",
         "sdk/unity/unity_shortcuts.h",
+        "sdk/vrchat/SDKBase/VRCPlayerAPI.h",
+        "sdk/vrchat/SDKBase/Networking.h",
         "mod/config/mod_config.h",
+        "mod/modules/modules.h",
+        "mod/modules/modules.cpp",
+        "mod/modules/Visuals/Visuals.h",
+        "mod/modules/Visuals/Visuals.cpp",
         "mod/hooks/render_imgui_hook.cpp",
         "mod/hooks/win32_viewport_policy.cpp",
     };
@@ -524,6 +701,18 @@ int main(int argc, char **argv) {
         Check(SyntaxCheck(project.root, probe, project.root),
               project.label + ": generated Unity SDK compiles against real call sites");
         fs::remove(probe, cleanup);
+
+        const fs::path vrcProbe = project.root / "urk_probe_vrc.cpp";
+        Write(vrcProbe, kVrcSdkBaseProbeSource);
+        Check(SyntaxCheck(project.root, vrcProbe, project.root),
+              project.label + ": generated VRChat SDKBase header compiles against real call sites");
+        fs::remove(vrcProbe, cleanup);
+
+        const fs::path moduleProbe = project.root / "urk_probe_modules.cpp";
+        Write(moduleProbe, kModulesProbeSource);
+        Check(SyntaxCheck(project.root, moduleProbe, project.root),
+              project.label + ": generated global Modules source compiles");
+        fs::remove(moduleProbe, cleanup);
 
         if (project.label == "il2cpp") {
             const fs::path helperProbe = project.root / "urk_probe_il2cpp_helpers.cpp";

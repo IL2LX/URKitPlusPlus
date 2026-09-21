@@ -131,6 +131,7 @@ std::string ResolveModId(const ModuleProjectOptions &options) {
 #include "templates/mod_project_generator_unity.inl"
 #include "templates/mod_project_generator_runtime.inl"
 #include "templates/mod_project_generator_ui.inl"
+#include "templates/mod_project_generator_vrchat.inl"
 
 std::string CMakeLists(const ModuleProjectOptions &options, const std::vector<fs::path> &sourceFiles,
                        const std::vector<fs::path> &moduleFiles) {
@@ -700,9 +701,15 @@ bool WriteModuleProject(const ModuleProjectOptions &options, std::string *error)
         {"sdk/unity/unity_components.h", OutputFilePolicy::GeneratedOverwrite, unityModules.components, true, true},
         {"sdk/unity/unity_inspect.h", OutputFilePolicy::GeneratedOverwrite, unityModules.inspect, true, true},
         {"sdk/unity/unity_shortcuts.h", OutputFilePolicy::GeneratedOverwrite, unityModules.shortcuts, true, true},
+        {"sdk/vrchat/SDKBase/VRCPlayerAPI.h", OutputFilePolicy::GeneratedOverwrite, VRChatPlayerApiModule(), true, true},
+        {"sdk/vrchat/SDKBase/Networking.h", OutputFilePolicy::GeneratedOverwrite, VRChatNetworkingModule(), true, true},
         {"mod/config/mod_config.h", OutputFilePolicy::EditablePreserve, ConfigModule(project), true, false},
         {"mod/support/mod_log.h", OutputFilePolicy::EditablePreserve, ModLogHeader(), true, false},
         {"mod/support/mod_log.cpp", OutputFilePolicy::EditablePreserve, ModLogSource(), true, false},
+        {"mod/modules/modules.h", OutputFilePolicy::EditablePreserve, ModulesHeaderModule(), true, false},
+        {"mod/modules/modules.cpp", OutputFilePolicy::EditablePreserve, ModulesSourceModule(), true, false},
+        {"mod/modules/Visuals/Visuals.h", OutputFilePolicy::EditablePreserve, VisualsHeaderModule(), true, false},
+        {"mod/modules/Visuals/Visuals.cpp", OutputFilePolicy::EditablePreserve, VisualsSourceModule(), true, false},
         {"mod/hooks/mod_hooks.h", OutputFilePolicy::EditablePreserve, ModHooksHeader(), true, false},
         {"mod/hooks/mod_hooks.cpp", OutputFilePolicy::EditablePreserve, ModHooksSource(project), true, false},
         {"mod/lifecycle/mod_network.h", OutputFilePolicy::EditablePreserve, NetworkInitHeader(), true, false},

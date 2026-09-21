@@ -51,6 +51,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT mes
 #include "dxgi_hook_discovery.h"
 #include "sdk/hook_api.h"
 #include "sdk/runtime_api.h"
+#include "modules/modules.h"
 #include "ui/highlight.h"
 #include "ui/menu.h"
 #include "ui/theme.h"
@@ -2026,6 +2027,7 @@ inline void render_dx12_frame(IDXGISwapChain *swap_chain) {
     ImGui::NewFrame();
     ImGui::GetIO().MouseDrawCursor = false;
     ModUI::Highlight::manager().render();
+    Modules::System::Render();
     ModUI::render_menu();
     publish_imgui_capture_state();
     ImGui::Render();
@@ -2090,6 +2092,7 @@ inline void render_frame(IDXGISwapChain *swap_chain) {
     ImGui::NewFrame();
     ImGui::GetIO().MouseDrawCursor = false;
     ModUI::Highlight::manager().render();
+    Modules::System::Render();
     ModUI::render_menu();
     publish_imgui_capture_state();
     ImGui::Render();
@@ -2301,6 +2304,7 @@ inline void render_opengl_frame(HDC device_context) {
     ImGui::NewFrame();
     ImGui::GetIO().MouseDrawCursor = false;
     ModUI::Highlight::manager().render();
+    Modules::System::Render();
     ModUI::render_menu();
     publish_imgui_capture_state();
     ImGui::Render();

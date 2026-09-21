@@ -1364,7 +1364,7 @@ inline constexpr TypeRef TextureType{"", "UnityEngine", "Texture"};
 inline constexpr TypeRef Texture2DType{"", "UnityEngine", "Texture2D"};
 inline constexpr TypeRef ShaderType{"", "UnityEngine", "Shader"};
 inline constexpr TypeRef SpriteType{"", "UnityEngine", "Sprite"};
-inline constexpr TypeRef AssetBundleType{"", "UnityEngine", "AssetBundle"};
+inline constexpr TypeRef AssetBundleType{"UnityEngine.AssetBundleModule.dll", "UnityEngine", "AssetBundle"};
 inline constexpr TypeRef ScreenType{"", "UnityEngine", "Screen"};
 inline constexpr TypeRef TimeType{"", "UnityEngine", "Time"};
 inline constexpr TypeRef ResourcesType{"", "UnityEngine", "Resources"};

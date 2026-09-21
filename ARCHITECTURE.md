@@ -31,6 +31,7 @@ Generator templates follow the ownership of their generated artifacts:
 | `src/sdk/templates/runtime/` | Runtime ABI helpers, events, async support, lifecycle, and mod support files. |
 | `src/sdk/templates/unity/` | Unity types, components, invocation, inspection, aliases, and backend specialization. |
 | `src/sdk/templates/ui/` | Theme, widgets, localization, menu, highlight, graphics backends, Win32 input, and render hooks. |
+| `src/sdk/templates/vrchat/` | Game-specific VRChat adapters, with the SDKBase wrappers under `vrchat/SDKBase/`. |
 
 The three `mod_project_generator_*.inl` files are include catalogs only. New
 templates belong in the matching responsibility directory and must be added to

@@ -526,6 +526,62 @@ struct Texture2D : Texture {
     void Apply(bool updateMipmaps, bool makeNoLongerReadable = false) const {
         CallExact<void>("Apply", {"System.Boolean", "System.Boolean"}, updateMipmaps, makeNoLongerReadable);
     }
+    static Texture2D Create(int width = 2, int height = 2) {
+        detail::clear_error();
+        const void *k = Texture2DType.resolve_class();
+        if (!k) {
+            detail::set_error("Unity Texture2D::Create failed: Texture2D class not found");
+            detail::append_backend_error();
+            return {};
+        }
+        void *o = detail::Backend::object_new(k);
+        if (!o) {
+            detail::set_error("Unity Texture2D::Create failed: object allocation failed");
+            detail::append_backend_error();
+            return {};
+        }
+        const void *c = detail::Backend::find_method_exact(
+            k, ".ctor", std::vector<const char *>{"System.Int32", "System.Int32"});
+        if (!c) {
+            detail::set_error("Unity Texture2D::Create failed: (int,int) constructor not found");
+            detail::append_backend_error();
+            return {};
+        }
+        int args[2] = {width, height};
+        void *argv[2] = {&args[0], &args[1]};
+        void *ex = nullptr;
+        if (!detail::Backend::runtime_invoke(c, o, argv, nullptr, &ex) || ex) {
+            detail::set_error("Unity Texture2D::Create failed: constructor threw or could not "
+                              "be invoked");
+            detail::append_backend_error();
+            return {};
+        }
+        return Texture2D{o};
+    }
+    bool LoadImage(void *bytes, bool markNonReadable = false) const {
+        if (!bytes)
+            return false;
+        const auto candidate = [&]() {
+            return detail::InvokeStatic<bool>(TypeRef{"", "UnityEngine", "ImageConversion"},
+                                              "LoadImage", handle(), bytes, markNonReadable);
+        };
+        if (candidate())
+            return true;
+        detail::clear_error();
+        return detail::InvokeStatic<bool>(TypeRef{"", "UnityEngine", "ImageConversion"},
+                                          "LoadImage", handle(), bytes);
+    }
+    static Texture2D LoadFromFile(std::string_view path) {
+        detail::clear_error();
+        void *bytes = detail::InvokeStatic<void *>(TypeRef{"", "System.IO", "File"},
+                                                   "ReadAllBytes", path);
+        if (!bytes)
+            return {};
+        Texture2D tex = Create();
+        if (!tex || !tex.LoadImage(bytes))
+            return {};
+        return tex;
+    }
 };
 struct Shader : Object {
     Shader() = default;
@@ -1399,6 +1455,41 @@ struct Sprite : Object {
     }
     static constexpr TypeRef unity_type() {
         return SpriteType;
+    }
+    void *GetTexture() const {
+        return Call<void *>("get_texture");
+    }
+    Rect GetRect() const {
+        return Call<Rect>("get_rect");
+    }
+    Vector2 GetPivot() const {
+        return Call<Vector2>("get_pivot");
+    }
+    Vector4 GetBorder() const {
+        return Call<Vector4>("get_border");
+    }
+    float GetPixelsPerUnit() const {
+        return Call<float>("get_pixelsPerUnit");
+    }
+    bool GetPacked() const {
+        return Call<bool>("get_packed");
+    }
+    enum class MeshType : std::uint32_t { Tight = 0, FullRect = 1 };
+    static Sprite Create(void *texture, Rect rect, Vector2 pivot, float pixelsPerUnit = 100.0f) {
+        return detail::InvokeStatic<Sprite>(SpriteType, "Create", texture, rect, pivot, pixelsPerUnit);
+    }
+    static Sprite Create(void *texture, Rect rect, Vector2 pivot, float pixelsPerUnit,
+                         std::uint32_t extrude, MeshType meshType) {
+        return detail::InvokeStatic<Sprite>(SpriteType, "Create", texture, rect, pivot, pixelsPerUnit,
+                                            extrude, static_cast<std::uint32_t>(meshType));
+    }
+    static Sprite LoadFromFile(std::string_view path, float pixelsPerUnit = 100.0f) {
+        Texture2D tex = Texture2D::LoadFromFile(path);
+        if (!tex)
+            return {};
+        Rect rect{0.0f, 0.0f, static_cast<float>(tex.width()), static_cast<float>(tex.height())};
+        Vector2 pivot{0.5f, 0.5f};
+        return Create(tex.handle(), rect, pivot, pixelsPerUnit);
     }
 };
 struct Graphic : Behaviour {

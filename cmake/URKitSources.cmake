@@ -137,6 +137,7 @@ set(URK_SDK_TEMPLATE_FILES
     ${URK_SRC_DIR}/sdk/templates/mod_project_generator_runtime.inl
     ${URK_SRC_DIR}/sdk/templates/mod_project_generator_ui.inl
     ${URK_SRC_DIR}/sdk/templates/mod_project_generator_unity.inl
+    ${URK_SRC_DIR}/sdk/templates/mod_project_generator_vrchat.inl
     ${URK_SRC_DIR}/sdk/templates/runtime/runtime_api.inl
     ${URK_SRC_DIR}/sdk/templates/runtime/hooks_api.inl
     ${URK_SRC_DIR}/sdk/templates/runtime/network_api.inl
@@ -165,6 +166,8 @@ set(URK_SDK_TEMPLATE_FILES
     ${URK_SRC_DIR}/sdk/templates/unity/inspect_codegen.inl
     ${URK_SRC_DIR}/sdk/templates/unity/backend_codegen.inl
     ${URK_SRC_DIR}/sdk/templates/unity/module_split.inl
+    ${URK_SRC_DIR}/sdk/templates/vrchat/SDKBase/VRCPlayerAPI.inl
+${URK_SRC_DIR}/sdk/templates/vrchat/SDKBase/Networking.inl
 )
 set_source_files_properties(${URK_SDK_TEMPLATE_FILES} PROPERTIES HEADER_FILE_ONLY TRUE)
 list(APPEND URK_SDK_TOOL_SRC ${URK_SDK_TEMPLATE_FILES})
