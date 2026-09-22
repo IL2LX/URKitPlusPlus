@@ -1,7 +1,7 @@
 std::string VRChatNetworkingModule() {
     return R"URKVRCNETWORKING(#pragma once
 
-#include "sdk/vrchat/SDKBase/VRCPlayerAPI.h"
+#include "sdk/VRChat/VRC/SDKBase/VRCPlayerAPI.h"
 
 #include <string>
 #include <vector>

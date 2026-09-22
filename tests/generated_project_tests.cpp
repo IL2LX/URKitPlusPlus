@@ -418,7 +418,8 @@ extern "C" int urk_il2cpp_helper_probe(void *target) {
 )PROBE";
 
 constexpr std::string_view kVrcSdkBaseProbeSource = R"PROBE(
-#include "sdk/vrchat/SDKBase/Networking.h"
+#include "sdk/VRChat/VRC/SDKBase/Networking.h"
+#include "sdk/VRChat/VRC/Core/APIUser.h"
 
 #include <string>
 #include <vector>
@@ -440,6 +441,13 @@ void probe_vrc_sdkbase() {
     VRC::SDKBase::Networking::SetOwner(local, URK::Unity::GameObject{nullptr});
     (void)VRC::SDKBase::Networking::PlayerObjects(local);
     (void)VRC::SDKBase::kNetworking;
+    (void)VRC::Core::APIUser::unity_type();
+    (void)VRC::Core::APIUser::GetCurrentUser();
+    (void)VRC::Core::APIUser{nullptr}.GetBioLinks();
+    (void)VRC::Core::APIUser{nullptr}.GetCurrentAvatarTags();
+    (void)VRC::Core::APIUser{nullptr}.GetFriendIDs();
+    (void)VRC::Core::APIUser{nullptr}.GetTags();
+    (void)VRC::Core::APIUser{nullptr}.GetStatusHistory();
     (void)VRC::SDKBase::VRCPlayerApi::unity_type();
     (void)Unity::last_error();
     Unity::clear_error();
@@ -652,8 +660,8 @@ void CheckLayout(const GeneratedProject &project) {
         "sdk/unity/unity_invoke.h",
         "sdk/unity/unity_components.h",
         "sdk/unity/unity_shortcuts.h",
-        "sdk/vrchat/SDKBase/VRCPlayerAPI.h",
-        "sdk/vrchat/SDKBase/Networking.h",
+        "sdk/VRChat/VRC/SDKBase/VRCPlayerAPI.h",
+        "sdk/VRChat/VRC/SDKBase/Networking.h",
         "mod/config/mod_config.h",
         "mod/modules/modules.h",
         "mod/modules/modules.cpp",
