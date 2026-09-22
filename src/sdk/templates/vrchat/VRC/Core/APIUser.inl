@@ -105,11 +105,11 @@ struct APIUser : Unity::Object {
 	}
 
 	std::string LastLogin() const {
-		return Call<std::string>("get_lastLogin");
+		return Call<std::string>("get_last_login");
 	}
 
 	std::string LastActivity() const {
-		return Call<std::string>("get_lastActivity");
+		return Call<std::string>("get_last_activity");
 	}
 
 	std::string DateJoined() const {
@@ -277,19 +277,15 @@ struct APIUser : Unity::Object {
 	}
 
 	std::string LastPlatform() const {
-		return Call<std::string>("get_lastPlatform");
+		return Call<std::string>("get_last_platform");
 	}
 
 	std::string Platform() const {
 		return Call<std::string>("get_platform");
 	}
 
-	std::string LastMobile() const {
-		return Call<std::string>("get_lastMobile");
-	}
-
 	bool IsOnMobile() const {
-		return Call<bool>("get_isOnMobile");
+		return Call<bool>("get_IsOnMobile");
 	}
 
 	std::string ProfilePicImageUrl() const {
@@ -405,15 +401,15 @@ struct APIUser : Unity::Object {
 	}
 
 	bool IsSelf() const {
-		return Call<bool>("get_isSelf");
+		return Call<bool>("get_IsSelf");
 	}
 
 	bool HasRequestedToBeFriend() const {
-		return Call<bool>("get_hasRequestedToBeFriend");
+		return Call<bool>("get_HasRequestedToBeFriend");
 	}
 
 	bool HasFriendRequestPending() const {
-		return Call<bool>("get_hasFriendRequestPending");
+		return Call<bool>("get_HasFriendRequestPending");
 	}
 
 	std::string Id() const {
@@ -421,9 +417,8 @@ struct APIUser : Unity::Object {
 	}
 
 	bool Populated() const {
-		return Call<bool>("get_populated");
+		return Call<bool>("get_Populated");
 	}
 };
-} // namespace VRC::Core
-)URKAPIUSER";
+} // namespace VRC::Core)URKAPIUSER";
 }
