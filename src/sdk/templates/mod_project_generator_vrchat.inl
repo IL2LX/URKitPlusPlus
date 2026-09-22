@@ -3,3 +3,4 @@
 #include "VRChat/VRC/SDKBase/Networking.inl"
 #include "VRChat/VRC/Core/APIUser.inl"
 #include "VRChat/HighlightsFX.inl"
+#include "VRChat/Menus.inl"

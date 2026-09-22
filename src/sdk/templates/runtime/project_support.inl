@@ -189,6 +189,8 @@ public:
     virtual void InMenuRender() {}                // inside the mod menu window while enabled
     virtual void OnSceneLoad(const char *sceneName, int buildIndex) {}    // always called
     virtual void OnSceneChanged(const char *fromScene, const char *toScene) {} // always called
+    virtual void OnQuickMenuInit() {}             // once, when Canvas_QuickMenu(Clone) appears
+    virtual void OnMainMenuInit() {}              // once, when Canvas_MainMenu(Clone) appears
 
     // drives the cadence hooks; called by System::Tick, do not override
     void TickInternal(float deltaTime);
@@ -213,6 +215,13 @@ void Toggle(Module *module);
 void EnableAll();
 void DisableAll();
 
+template <typename T>
+T &Register() {
+    static T instance;
+    Register(&instance);
+    return instance;
+}
+
 int count();
 int count(Category category);
 std::size_t enabled_count();
@@ -226,6 +235,8 @@ void Render();
 void MenuRender();
 void SceneLoad(const char *sceneName, int buildIndex);
 void SceneChanged(const char *fromScene, const char *toScene);
+void QuickMenuInit();
+void MainMenuInit();
 } // namespace System
 
 // Implement this in modules.cpp: register your module instances here.
@@ -384,6 +395,16 @@ void SceneChanged(const char *fromScene, const char *toScene) {
         m->OnSceneChanged(fromScene, toScene);
 }
 
+void QuickMenuInit() {
+    for (Module *m : registry()) // always, even while disabled
+        m->OnQuickMenuInit();
+}
+
+void MainMenuInit() {
+    for (Module *m : registry()) // always, even while disabled
+        m->OnMainMenuInit();
+}
+
 } // namespace System
 
 #if 0 // ── copy this shape for your own features ─────────────────────────
@@ -404,13 +425,11 @@ TeleportCheatModule g_teleportCheat;
 } // namespace
 #endif
 
-namespace {
-Modules::VisualsModule g_visuals;
-} // namespace
-
 void RegisterModules() {
-    // Register your modules here; each one gets a toggle in the GUI menu.
-    Modules::System::Register(&g_visuals);
+    // Register each of your modules here; each one gets a toggle in the menu.
+    // Pass the module TYPE (not an instance): the system owns one instance per
+    // type, so no global variable is needed.
+    Modules::System::Register<Modules::VisualsModule>();
 }
 
 } // namespace Modules
@@ -445,6 +464,10 @@ public:
     // always called
     void OnSceneLoad(const char *sceneName, int buildIndex) override;
     void OnSceneChanged(const char *fromScene, const char *toScene) override;
+
+    // menu availability; called once for every module, enabled or not
+    void OnQuickMenuInit() override;
+    void OnMainMenuInit() override;
 };
 
 } // namespace Modules
@@ -492,6 +515,12 @@ void VisualsModule::OnSceneLoad(const char *sceneName, int buildIndex) {
 void VisualsModule::OnSceneChanged(const char *fromScene, const char *toScene) {
     (void)fromScene;
     (void)toScene;
+}
+
+void VisualsModule::OnQuickMenuInit() {
+}
+
+void VisualsModule::OnMainMenuInit() {
 }
 
 } // namespace Modules
@@ -611,6 +640,7 @@ std::string GameRuntimeSource(const ModuleProjectOptions &options) {
         << "#include \"sdk/runtime_api.h\"\n"
         << "#include \"sdk/runtime_bootstrap.h\"\n"
         << "#include \"sdk/unity/unity.h\"\n"
+        << "#include \"sdk/VRChat/Menus.h\"\n"
         << "#include \"modules/modules.h\"\n\n"
         << "namespace ModRuntime {\n"
         << "bool start(const URK_ModContext* ctx) {\n"
@@ -628,6 +658,7 @@ std::string GameRuntimeSource(const ModuleProjectOptions &options) {
         << "  return true;\n"
         << "}\n\n"
         << "void update() {\n"
+        << "  VRC::poll_menus();\n"
         << "  Modules::System::Tick(Unity::Time::deltaTime());\n"
         << "}\n\n"
         << "void on_scene_loaded(const URK_SceneInfo* scene) {\n"
