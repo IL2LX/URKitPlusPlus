@@ -380,6 +380,32 @@ struct APIUser : Unity::Object {
 		return Call<bool>("get_hasVeryNegativeTrustLevel");
 	}
 
+	// Rank color approximations based on the client's nameplate colors.
+	Unity::Color RankColor() const {
+		if (HasVeryNegativeTrustLevel()) {
+			return {0.55f, 0.0f, 0.0f, 1.0f};  // #8B0000  nuisance
+		}
+		if (HasNegativeTrustLevel()) {
+			return {0.55f, 0.0f, 0.0f, 1.0f};  // #8B0000  nuisance
+		}
+		if (HasLegendTrustLevel()) {
+			return {1.0f, 0.41f, 0.71f, 1.0f};  // #FF69B4  legendary
+		}
+		if (HasVeteranTrustLevel()) {
+			return {1.0f, 0.84f, 0.0f, 1.0f};  // #FFD700  veteran
+		}
+		if (HasTrustedTrustLevel()) {
+			return {0.69f, 0.43f, 0.88f, 1.0f};  // #B06DE0  trusted
+		}
+		if (HasKnownTrustLevel()) {
+			return {0.95f, 0.61f, 0.07f, 1.0f};  // #F39C12  known
+		}
+		if (HasBasicTrustLevel()) {
+			return {0.23f, 0.51f, 0.96f, 1.0f};  // #3A82F7  new user
+		}
+		return {0.75f, 0.75f, 0.75f, 1.0f};  // #C0C0C0  visitor
+	}
+
 	bool CanSetStatusOffline() const {
 		return Call<bool>("get_canSetStatusOffline");
 	}

@@ -169,6 +169,7 @@ set(URK_SDK_TEMPLATE_FILES
     ${URK_SRC_DIR}/sdk/templates/VRChat/VRC/SDKBase/VRCPlayerAPI.inl
     ${URK_SRC_DIR}/sdk/templates/VRChat/VRC/SDKBase/Networking.inl
     ${URK_SRC_DIR}/sdk/templates/VRChat/VRC/Core/APIUser.inl
+    ${URK_SRC_DIR}/sdk/templates/VRChat/HighlightsFX.inl
 )
 set_source_files_properties(${URK_SDK_TEMPLATE_FILES} PROPERTIES HEADER_FILE_ONLY TRUE)
 list(APPEND URK_SDK_TOOL_SRC ${URK_SDK_TEMPLATE_FILES})
