@@ -126,6 +126,11 @@ pipeline, caching, and a diagnostics chapter for when something doesn't work.
 [ARCHITECTURE.md](ARCHITECTURE.md) covers how URKit itself is put together,
 and [docs/DEV_MCP.md](docs/DEV_MCP.md) covers the AI-assistant MCP server.
 
+Building a mod for VRChat? The generated project includes ready-made wrappers
+for `VRC.SDKBase.VRCPlayerApi`, `VRC.SDKBase.Networking`, and
+`VRC.Core.APIUser` under `sdk/VRChat/VRC/`. See
+[docs/VRCHAT_SDK.md](docs/VRCHAT_SDK.md) for the full reference.
+
 Updating an existing project, migrating a hand-patched SDK, or automating the
 updater from a script: that's all in the handbook's first chapter.
 
