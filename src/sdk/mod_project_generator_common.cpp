@@ -695,6 +695,7 @@ bool WriteModuleProject(const ModuleProjectOptions &options, std::string *error)
         {"sdk/events.h", OutputFilePolicy::GeneratedOverwrite, EventsModule(), true, true},
         {"sdk/coroutines.h", OutputFilePolicy::GeneratedOverwrite, CoroutinesModule(), true, true},
         {"sdk/mod_async.h", OutputFilePolicy::GeneratedOverwrite, ModAsyncModule(), true, true},
+        {"mod/config/RuntimeConfig.h", OutputFilePolicy::GeneratedOverwrite, RuntimeConfigModule(), true, true},
         {"sdk/unity/unity.h", OutputFilePolicy::GeneratedOverwrite, unityModules.publicHeader, true, true},
         {"sdk/unity/unity_types.h", OutputFilePolicy::GeneratedOverwrite, unityModules.types, true, true},
         {"sdk/unity/unity_invoke.h", OutputFilePolicy::GeneratedOverwrite, unityModules.invoke, true, true},

@@ -142,6 +142,7 @@ set(URK_SDK_TEMPLATE_FILES
     ${URK_SRC_DIR}/sdk/templates/runtime/hooks_api.inl
     ${URK_SRC_DIR}/sdk/templates/runtime/network_api.inl
     ${URK_SRC_DIR}/sdk/templates/runtime/project_support.inl
+    ${URK_SRC_DIR}/sdk/templates/runtime/RuntimeConfig.inl
     ${URK_SRC_DIR}/sdk/templates/runtime/events_async.inl
     ${URK_SRC_DIR}/sdk/templates/runtime/lifecycle.inl
     ${URK_SRC_DIR}/sdk/templates/ui/theme_widgets.inl

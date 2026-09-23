@@ -569,6 +569,53 @@ extern "C" void urk_generated_modules_probe() {
 }
 )PROBE";
 
+constexpr std::string_view kRuntimeConfigProbeSource = R"PROBE(
+#include "mod/config/RuntimeConfig.h"
+
+#include <string>
+
+namespace {
+
+void probe_runtime_config() {
+    (void)RuntimeConfig::OpenOrCreateConfig("Probe");
+    (void)RuntimeConfig::SaveConfig();
+    (void)RuntimeConfig::Has("Movement", "Probe", "speed");
+    RuntimeConfig::SetBool("Movement", "Probe", "was_enabled_before", true);
+    RuntimeConfig::SetInt("Movement", "Probe", "max_players", 8);
+    RuntimeConfig::SetFloat("Movement", "Probe", "speed", 1.5f);
+    RuntimeConfig::SetDouble("Movement", "Probe", "height", 2.0);
+    RuntimeConfig::SetString("Movement", "Probe", "nickname", "urk");
+    const RuntimeConfig::Color color{1.0f, 0.5f, 0.25f, 1.0f};
+    RuntimeConfig::SetColor("Movement", "Probe", "tint", color);
+
+    const bool was_enabled = RuntimeConfig::GetBool("Movement", "Probe", "was_enabled_before", false);
+    const int max_players = RuntimeConfig::GetInt("Movement", "Probe", "max_players", 1);
+    const float speed = RuntimeConfig::GetFloat("Movement", "Probe", "speed", 0.0f);
+    const double height = RuntimeConfig::GetDouble("Movement", "Probe", "height", 0.0);
+    const std::string nickname = RuntimeConfig::GetString("Movement", "Probe", "nickname", "");
+    (void)was_enabled;
+    (void)max_players;
+    (void)speed;
+    (void)height;
+    (void)nickname;
+
+    RuntimeConfig::Color read{};
+    (void)RuntimeConfig::GetColor("Movement", "Probe", "tint", read, RuntimeConfig::Color{});
+
+    (void)RuntimeConfig::Remove("Movement", "Probe", "nickname");
+}
+
+void keep_referenced() {
+    probe_runtime_config();
+}
+
+} // namespace
+
+extern "C" void urk_generated_runtime_config_probe() {
+    keep_referenced();
+}
+)PROBE";
+
 
 
 struct GeneratedProject {
@@ -655,6 +702,7 @@ void CheckLayout(const GeneratedProject &project) {
         ".urk/generated-files.ini",
         "sdk/mod_sdk.h",
         "sdk/runtime_api.h",
+        "mod/config/RuntimeConfig.h",
         "sdk/unity/unity.h",
         "sdk/unity/unity_types.h",
         "sdk/unity/unity_invoke.h",
@@ -721,6 +769,12 @@ int main(int argc, char **argv) {
         Check(SyntaxCheck(project.root, moduleProbe, project.root),
               project.label + ": generated global Modules source compiles");
         fs::remove(moduleProbe, cleanup);
+
+        const fs::path configProbe = project.root / "urk_probe_runtime_config.cpp";
+        Write(configProbe, kRuntimeConfigProbeSource);
+        Check(SyntaxCheck(project.root, configProbe, project.root),
+              project.label + ": generated RuntimeConfig header compiles against real call sites");
+        fs::remove(configProbe, cleanup);
 
         if (project.label == "il2cpp") {
             const fs::path helperProbe = project.root / "urk_probe_il2cpp_helpers.cpp";
