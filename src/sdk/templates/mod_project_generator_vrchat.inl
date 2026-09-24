@@ -3,5 +3,6 @@
 #include "VRChat/VRC/SDKBase/Networking.inl"
 #include "VRChat/VRC/Core/APIUser.inl"
 #include "VRChat/VRC/Localization/LocalizableStringExtensions.inl"
+#include "VRChat/VRC/Udon/UdonBehaviour.inl"
 #include "VRChat/HighlightsFX.inl"
 #include "VRChat/Menus.inl"

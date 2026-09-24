@@ -64,6 +64,7 @@ void DumpEverything() {
     DumpFile(directory, "DeobfuscationMap.json.readable", &Il2Cpp_DumpReadableSymbolNames);
     DumpFile(directory, "DeobfuscationMap.beebyte.csv", &Il2Cpp_DumpDeobfuscationMapCsv);
 }
+
 } // namespace
 
 LoaderRunStatus Loader_Run(LoaderStartMode mode) {

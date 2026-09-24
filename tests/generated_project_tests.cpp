@@ -420,7 +420,9 @@ extern "C" int urk_il2cpp_helper_probe(void *target) {
 constexpr std::string_view kVrcSdkBaseProbeSource = R"PROBE(
 #include "sdk/VRChat/VRC/SDKBase/Networking.h"
 #include "sdk/VRChat/VRC/Core/APIUser.h"
+#include "sdk/VRChat/VRC/Udon/UdonBehaviour.h"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -443,12 +445,33 @@ void probe_vrc_sdkbase() {
     (void)VRC::SDKBase::kNetworking;
     (void)VRC::Core::APIUser::unity_type();
     (void)VRC::Core::APIUser::GetCurrentUser();
-    (void)VRC::Core::APIUser{nullptr}.GetBioLinks();
-    (void)VRC::Core::APIUser{nullptr}.GetCurrentAvatarTags();
-    (void)VRC::Core::APIUser{nullptr}.GetFriendIDs();
-    (void)VRC::Core::APIUser{nullptr}.GetTags();
-    (void)VRC::Core::APIUser{nullptr}.GetStatusHistory();
+    (void)VRC::Core::APIUser{nullptr}.BioLinks();
+    (void)VRC::Core::APIUser{nullptr}.CurrentAvatarTags();
+    (void)VRC::Core::APIUser{nullptr}.FriendIDs();
+    (void)VRC::Core::APIUser{nullptr}.Tags();
+    (void)VRC::Core::APIUser{nullptr}.StatusHistory();
     (void)VRC::SDKBase::VRCPlayerApi::unity_type();
+    (void)VRC::Udon::kUdonBehaviour;
+    (void)VRC::Udon::UdonBehaviour::unity_type();
+    VRC::Udon::UdonBehaviour behaviour{nullptr};
+    (void)behaviour.gameObject();
+    (void)behaviour.GetField<bool>("Reliable");
+    (void)behaviour.GetField<URK::Unity::Object>("publicVariables");
+    (void)behaviour.GetProperty<VRC::Udon::SyncType>("SyncMethod");
+    (void)behaviour.GetProperty<std::uint64_t>("ProgramSize");
+    (void)behaviour.GetProperty<URK::Unity::Object>("OnInit");
+    (void)behaviour.SendCustomEvent("Event");
+    (void)behaviour.SendCustomEventDelayedFrames("Event", 2);
+    (void)behaviour.SendCustomEventDelayedSeconds("Event", 0.5f, VRC::Udon::EventTiming::LateUpdate);
+    (void)behaviour.SendCustomNetworkEvent(VRC::Udon::NetworkEventTarget::All, "Event");
+    (void)behaviour.SendCustomNetworkEvent(VRC::Udon::NetworkEventTarget::Owner, "Event", nullptr, nullptr, nullptr);
+    (void)behaviour.RunProgram("Start");
+    (void)behaviour.RunProgram(std::uint32_t{0});
+    (void)behaviour.GetProgramVariable("Value");
+    (void)behaviour.GetProgramVariableType("Value");
+    (void)behaviour.TryGetProgramVariable("Value", nullptr);
+    (void)behaviour.Interact();
+    (void)behaviour.OnNetworkReady();
     (void)Unity::last_error();
     Unity::clear_error();
 }
@@ -710,6 +733,7 @@ void CheckLayout(const GeneratedProject &project) {
         "sdk/unity/unity_shortcuts.h",
         "sdk/VRChat/VRC/SDKBase/VRCPlayerAPI.h",
         "sdk/VRChat/VRC/SDKBase/Networking.h",
+        "sdk/VRChat/VRC/Udon/UdonBehaviour.h",
         "mod/config/mod_config.h",
         "mod/modules/modules.h",
         "mod/modules/modules.cpp",

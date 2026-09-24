@@ -9,8 +9,10 @@ generated into every project targeting VRChat. They sit under
 | `sdk/VRChat/VRC/SDKBase/VRCPlayerAPI.h` | `VRC.SDKBase.VRCPlayerApi` |
 | `sdk/VRChat/VRC/SDKBase/Networking.h` | `VRC.SDKBase.Networking` |
 | `sdk/VRChat/VRC/Core/APIUser.h` | `VRC.Core.APIUser` |
+| `sdk/VRChat/VRC/Localization/LocalizableStringExtensions.h` | `VRC.Localization.LocalizableString` |
+| `sdk/VRChat/VRC/Udon/UdonBehaviour.h` | `VRC.Udon.UdonBehaviour` |
 
-All three are `OutputFilePolicy::GeneratedOverwrite`, so they are rewritten by
+All of them are `OutputFilePolicy::GeneratedOverwrite`, so they are rewritten by
 the generator and **must not be edited by hand**. If you need a change,
 edit the `.inl` template under
 `src/sdk/templates/VRChat/VRC/` and regenerate, or copy the wrapper into a
@@ -26,6 +28,10 @@ src/sdk/templates/VRChat/
       Networking.inl
     Core/
       APIUser.inl
+    Localization/
+      LocalizableStringExtensions.inl
+    Udon/
+      UdonBehaviour.inl
 ```
 
 ## Quick example
@@ -181,6 +187,66 @@ The wrapper converts these to `std::vector<std::string>` by calling
 If a future `APIUser` member returns a `List<T>` of something other than
 `string`, it needs its own wrapper or a type-based discovery helper; the
 generated code currently only enumerates string lists.
+
+## UdonBehaviour (`VRC::Udon::UdonBehaviour`)
+
+A wrapper around `VRC.Udon.UdonBehaviour` from `VRC.Udon.dll`. The type derives
+from `Unity::MonoBehaviour`, so it inherits `gameObject()`, `transform()`,
+`GetComponent<T>()` and `enabled()` on top of the members below.
+
+The wrapper also mirrors the three managed enums it takes, with the literal
+values dumped from the shipping client:
+
+| C++ enum | Managed enum |
+|---|---|
+| `SyncType` (`None`, `Any`, `Continuous`, `Manual`, `NoVariableSync`) | `VRC.SDKBase.Networking.SyncType` |
+| `NetworkEventTarget` (`All`, `Owner`, `Others`, `Self`) | `VRC.Udon.Common.Interfaces.NetworkEventTarget` |
+| `EventTiming` (`Update`, `LateUpdate`, `PostLateUpdate`, `FixedUpdate`) | `VRC.Udon.Common.Enums.EventTiming` |
+
+All three have a `System.Int32` underlying type, so enum-typed arguments and
+returns are passed through directly.
+
+### Fields vs properties
+
+`UdonBehaviour` mixes both, same as `VRCPlayerApi`:
+
+- `Reliable`, `SynchronizePosition`, `AllowCollisionOwnershipTransfer` and
+  `publicVariables` are **fields** — read with `GetField`/`SetField`.
+- `SyncMethod`, `IsInteractive`, `HasDoneStart`, `ProgramId`, ... are
+  **properties** — read with `GetProperty`, written with the matching
+  `set_*` call.
+
+`PublicVariables()` returns the live `IUdonVariableTable` as a generic
+`Unity::Object`; per-variable access goes through the program-variable members.
+
+### Custom events
+
+- `SendCustomEvent(string)`
+- `SendCustomEventDelayedFrames(string, int, EventTiming = Update)`
+- `SendCustomEventDelayedSeconds(string, float, EventTiming = Update)`
+- `SendCustomNetworkEvent(NetworkEventTarget, string[, object x0..x2])` — the
+  `System.Object` parameters are passed as opaque managed pointers, so a value
+  type has to be boxed by the caller.
+- `RequestSerialization()`, `SerializePublicVariables()`,
+  `DeserializePublicVariables()`
+
+### Program variables
+
+- `RunProgram(string)` / `RunProgram(uint32)`
+- `GetProgramVariable(string)` -> boxed `Unity::Object`, or null when the symbol
+  is missing. It is routed through `TryGetProgramVariable` on purpose: the
+  managed type also declares `GetProgramVariable<T>(string)`, and the two share
+  an identical parameter list, so an exact lookup on the non-generic overload is
+  reported as ambiguous by `find_method_exact`.
+- `SetProgramVariable(string, void *)` — a Unity object can be passed directly
+- `TryGetProgramVariable(string, void **)` — the out-parameter form
+- `GetProgramVariableType(string)` -> `Unity::TypeObject`
+
+### Interaction entry points
+
+`Interact()`, `OnPickup()`, `OnPickupUseDown()`, `OnPickupUseUp()`,
+`OnDrop()` and `OnNetworkReady()` are the managed entry points VRChat invokes,
+wrapped so a mod can trigger them directly.
 
 ## Codegen conventions
 
