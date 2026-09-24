@@ -705,6 +705,8 @@ bool WriteModuleProject(const ModuleProjectOptions &options, std::string *error)
         {"sdk/VRChat/VRC/SDKBase/VRCPlayerAPI.h", OutputFilePolicy::GeneratedOverwrite, VRChatPlayerApiModule(), true, true},
         {"sdk/VRChat/VRC/SDKBase/Networking.h", OutputFilePolicy::GeneratedOverwrite, VRChatNetworkingModule(), true, true},
         {"sdk/VRChat/VRC/Core/APIUser.h", OutputFilePolicy::GeneratedOverwrite, VRChatApiUserModule(), true, true},
+        {"sdk/VRChat/VRC/Localization/LocalizableStringExtensions.h", OutputFilePolicy::GeneratedOverwrite,
+         VRChatLocalizableStringExtensionsModule(), true, true},
         {"sdk/VRChat/HighlightsFX.h", OutputFilePolicy::GeneratedOverwrite, VRChatHighlightsFxModule(), true, true},
         {"sdk/VRChat/Menus.h", OutputFilePolicy::GeneratedOverwrite, VRChatMenusModule(), true, true},
         {"mod/config/mod_config.h", OutputFilePolicy::EditablePreserve, ConfigModule(project), true, false},
