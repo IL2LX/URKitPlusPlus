@@ -9,11 +9,10 @@ std::string VRChatUdonBehaviourModule() {
 namespace VRC::Udon
 {
     enum class SyncType : std::int32_t {
-        None = 0,
-        Any = 1,
+        Unknown = 0,
+        None = 1,
         Continuous = 2,
         Manual = 3,
-        NoVariableSync = 4,
     };
 
     enum class NetworkEventTarget : std::int32_t {
