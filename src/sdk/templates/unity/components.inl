@@ -561,15 +561,13 @@ struct Texture2D : Texture {
     bool LoadImage(void *bytes, bool markNonReadable = false) const {
         if (!bytes)
             return false;
-        const auto candidate = [&]() {
-            return detail::InvokeStatic<bool>(TypeRef{"", "UnityEngine", "ImageConversion"},
-                                              "LoadImage", handle(), bytes, markNonReadable);
-        };
-        if (candidate())
+        static const TypeRef imageConversion{ "", "UnityEngine", "ImageConversion" };
+        static const std::vector<const char *> kArgs{ "UnityEngine.Texture2D", "System.Byte[]", "System.Boolean" };
+        static const std::vector<const char *> kArgsNoFlag{ "UnityEngine.Texture2D", "System.Byte[]" };
+        if (detail::InvokeStaticExact<bool>(imageConversion, "LoadImage", kArgs, handle(), bytes, markNonReadable))
             return true;
         detail::clear_error();
-        return detail::InvokeStatic<bool>(TypeRef{"", "UnityEngine", "ImageConversion"},
-                                          "LoadImage", handle(), bytes);
+        return detail::InvokeStaticExact<bool>(imageConversion, "LoadImage", kArgsNoFlag, handle(), bytes);
     }
     static Texture2D LoadFromFile(std::string_view path) {
         detail::clear_error();
@@ -584,12 +582,11 @@ struct Texture2D : Texture {
     }
 
     static Texture2D MakeFromB64(std::string_view base64) {
+        static const TypeRef convert{ "", "System", "Convert" };
         detail::clear_error();
-        void *bytes =
-            detail::InvokeStatic<void *>(TypeRef{"", "System", "Convert"}, "FromBase64String", base64);
+        void *bytes = detail::InvokeStatic<void *>(convert, "FromBase64String", base64);
         if (!bytes) {
-            detail::set_error("Unity Texture2D::MakeFromB64 failed: base64 decode did not return a byte "
-                              "array (malformed input?)");
+            detail::set_error("Unity Texture2D::MakeFromB64 failed: base64 decode did not return a byte array (malformed input?)");
             detail::append_backend_error();
             return {};
         }
@@ -1492,12 +1489,12 @@ struct Sprite : Object {
     }
     enum class MeshType : std::uint32_t { Tight = 0, FullRect = 1 };
     static Sprite Create(void *texture, Rect rect, Vector2 pivot, float pixelsPerUnit = 100.0f) {
-        return detail::InvokeStatic<Sprite>(SpriteType, "Create", texture, rect, pivot, pixelsPerUnit);
+        static const std::vector<const char *> kArgs{ "UnityEngine.Texture2D", "UnityEngine.Rect", "UnityEngine.Vector2", "System.Single" };
+        return detail::InvokeStaticExact<Sprite>(SpriteType, "Create", kArgs, texture, rect, pivot, pixelsPerUnit);
     }
-    static Sprite Create(void *texture, Rect rect, Vector2 pivot, float pixelsPerUnit,
-                         std::uint32_t extrude, MeshType meshType) {
-        return detail::InvokeStatic<Sprite>(SpriteType, "Create", texture, rect, pivot, pixelsPerUnit,
-                                            extrude, static_cast<std::uint32_t>(meshType));
+    static Sprite Create(void *texture, Rect rect, Vector2 pivot, float pixelsPerUnit, std::uint32_t extrude, MeshType meshType) {
+        static const std::vector<const char *> kArgs{ "UnityEngine.Texture2D", "UnityEngine.Rect", "UnityEngine.Vector2", "System.Single", "System.UInt32", "UnityEngine.SpriteMeshType" };
+        return detail::InvokeStaticExact<Sprite>(SpriteType, "Create", kArgs, texture, rect, pivot, pixelsPerUnit, extrude, static_cast<int>(meshType));
     }
     // Shared tail for the image loaders: wrap a full-texture image in a sprite
     // with a centred pivot.

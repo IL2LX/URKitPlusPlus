@@ -4,8 +4,10 @@ std::string ModSdkModule() {
     return R"URKCOMMONSDK(#pragma once
 
 #include "sdk/mod_sdk.h"
+#include <Windows.h>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 
 namespace URK {
 using GetModInfoFn = ::URK_GetModInfoFn;
@@ -125,6 +127,16 @@ inline bool has_hooks() {
 }
 inline bool has_main_thread() {
     return has_runtime_capability(runtime_cap_main_thread);
+}
+inline std::filesystem::path executable_directory() {
+    wchar_t buffer[MAX_PATH]{};
+    const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+    if (length == 0)
+        return {};
+    return std::filesystem::path(buffer).parent_path();
+}
+inline std::filesystem::path user_data_directory() {
+    return executable_directory() / "URKit" / "UserData";
 }
 inline bool has_scene_events() {
     return has_runtime_capability(runtime_cap_scene_events);

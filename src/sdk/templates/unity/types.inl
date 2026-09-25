@@ -697,8 +697,6 @@ enum class SendMessageOptions : int {
     RequireReceiver = 0,
     DontRequireReceiver = 1
 };
-// UnityEngine.ForceMode. The literals are not contiguous, so they are spelled
-// out rather than relying on declaration order.
 enum class ForceMode : int {
     Force = 0,
     Impulse = 1,
@@ -1493,6 +1491,13 @@ template <class T> void *field_value(T &v) {
     return a.ptr;
 }
 template <class Ret, class... Args> Ret InvokeStatic(TypeRef type, std::string_view methodName, Args &&...args);
+// InvokeStatic derives the managed parameter type names from the C++ argument
+// types. A void* therefore always infers as System.Object, which cannot match a
+// declared UnityEngine.Texture2D or System.Byte[] parameter. Use this overload
+// when the real parameter types are known and not inferable.
+template <class Ret, class... Args>
+Ret InvokeStaticExact(TypeRef type, std::string_view methodName,
+                      const std::vector<const char *> &parameterTypeNames, Args &&...args);
 template <class T, class... Args>
 std::vector<T> StaticArrayCall(TypeRef type, std::string_view methodName, Args &&...args);
 template <class T, class... ExtraArgs>

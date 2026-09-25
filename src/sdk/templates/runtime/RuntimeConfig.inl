@@ -416,15 +416,11 @@ inline std::string serialize(const Value &document, bool pretty) {
 }
 
 inline std::filesystem::path exe_dir() {
-    wchar_t buffer[MAX_PATH]{};
-    const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
-    if (length == 0)
-        return {};
-    return std::filesystem::path(buffer).parent_path();
+    return URK::executable_directory();
 }
 
 inline std::filesystem::path config_directory() {
-    return exe_dir() / "URKit" / "UserData" / "Configs";
+    return URK::user_data_directory() / "Configs";
 }
 
 inline std::filesystem::path config_path(const std::string &moduleName) {

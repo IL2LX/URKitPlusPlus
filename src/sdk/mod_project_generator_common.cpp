@@ -561,7 +561,7 @@ const wchar_t *ClangFormatStyle() {
     return L"{BasedOnStyle: Microsoft, IndentWidth: 4, TabWidth: 4, UseTab: Never, "
            L"BreakBeforeBraces: Attach, AllowShortIfStatementsOnASingleLine: Never, "
            L"AllowShortLoopsOnASingleLine: false, AllowShortBlocksOnASingleLine: Never, "
-           L"AllowShortFunctionsOnASingleLine: None, IndentCaseLabels: true, ColumnLimit: 120, "
+           L"AllowShortFunctionsOnASingleLine: None, IndentCaseLabels: true, ColumnLimit: 0, "
            L"SortIncludes: Never}";
 }
 

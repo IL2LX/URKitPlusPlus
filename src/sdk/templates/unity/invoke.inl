@@ -645,9 +645,64 @@ Ret detail::InvokeStatic(TypeRef type, std::string_view methodName, Args &&...ar
     return from_result<Ret>(result);
 }
 
+template <class Ret, class... Args>
+Ret detail::InvokeStaticExact(TypeRef type, std::string_view methodName,
+                              const std::vector<const char *> &parameterTypeNames, Args &&...args) {
+    clear_error();
+    const void *k = type.resolve_class();
+    if (!k) {
+        set_error(std::string("Unity static call failed: class not found for ") + std::string(type.namespc) + "." +
+                  std::string(type.name));
+        append_backend_error();
+        return from_result<Ret>(nullptr);
+    }
+    if (parameterTypeNames.size() != sizeof...(Args)) {
+        set_error(std::string("Unity static call failed: declared parameter type count does not match the argument "
+                              "count in ") +
+                  std::string(methodName));
+        return from_result<Ret>(nullptr);
+    }
+    for (const char *declared : parameterTypeNames) {
+        if (!declared || !*declared) {
+            set_error(std::string("Unity static call failed: parameter type names must be non-empty in ") +
+                      std::string(methodName));
+            return from_result<Ret>(nullptr);
+        }
+    }
+    const void *m = Backend::find_method_exact(k, methodName, parameterTypeNames);
+    if (!m) {
+        const std::string lookupDetail = fallback_error() ? fallback_error() : "";
+        set_error(std::string("Unity static call failed: Unity method not found or ambiguous: ") +
+                  std::string(type.namespc) + "." + std::string(type.name) + "." +
+                  signature_text(methodName, parameterTypeNames) +
+                  (lookupDetail.empty() ? std::string{} : "; detail: " + lookupDetail));
+        append_backend_error();
+        return from_result<Ret>(nullptr);
+    }
+    auto pack =
+        std::tuple<Arg<std::remove_cvref_t<Args>>...>(Arg<std::remove_cvref_t<Args>>(std::forward<Args>(args))...);
+    std::array<void *, sizeof...(Args)> argv{};
+    std::size_t i = 0;
+    bool argsValid = true;
+    std::apply([&](auto &...a) { ((argsValid = argsValid && a.valid, argv[i++] = a.ptr), ...); }, pack);
+    if (!argsValid) {
+        set_error(std::string("Unity static call failed: managed string argument allocation failed in ") +
+                  std::string(methodName));
+        append_backend_error();
+        return from_result<Ret>(nullptr);
+    }
+    void *result = nullptr;
+    void *ex = nullptr;
+    if (!Backend::runtime_invoke(m, nullptr, argv.empty() ? nullptr : argv.data(), &result, &ex) || ex) {
+        set_error(std::string("Unity static call failed: runtime_invoke exception in ") + std::string(methodName));
+        append_backend_error();
+        return from_result<Ret>(nullptr);
+    }
+    return from_result<Ret>(result);
+}
+
 template <class T, class... Args>
-std::vector<T> detail::StaticArrayCall(TypeRef type, std::string_view methodName, Args &&...args) {
-    void *array = InvokeStatic<void *>(type, methodName, std::forward<Args>(args)...);
+std::vector<T> detail::StaticArrayCall(TypeRef type, std::string_view methodName, Args &&...args) {    void *array = InvokeStatic<void *>(type, methodName, std::forward<Args>(args)...);
     return RootedObjectArray<T>::from_managed_array(array, "Unity static array call").copy_items();
 }
 
