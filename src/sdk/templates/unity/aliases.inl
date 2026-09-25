@@ -31,6 +31,7 @@ using Dropdown = URK::Unity::Dropdown;
 using EventSystem = URK::Unity::EventSystem;
 using FindObjectsSortMode = URK::Unity::FindObjectsSortMode;
 using FontStyle = URK::Unity::FontStyle;
+using ForceMode = URK::Unity::ForceMode;
 using GameObject = URK::Unity::GameObject;
 using Graphic = URK::Unity::Graphic;
 using GraphicRaycaster = URK::Unity::GraphicRaycaster;

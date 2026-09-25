@@ -11,6 +11,8 @@ generated into every project targeting VRChat. They sit under
 | `sdk/VRChat/VRC/Core/APIUser.h` | `VRC.Core.APIUser` |
 | `sdk/VRChat/VRC/Localization/LocalizableStringExtensions.h` | `VRC.Localization.LocalizableString` |
 | `sdk/VRChat/VRC/Udon/UdonBehaviour.h` | `VRC.Udon.UdonBehaviour` |
+| `sdk/VRChat/VRC/SDKBase/VRC_Pickup.h` | `VRC.SDKBase.VRC_Pickup` |
+| `sdk/VRChat/VRC/SDK3/Components/VRCPickup.h` | `VRC.SDK3.Components.VRCPickup` |
 
 All of them are `OutputFilePolicy::GeneratedOverwrite`, so they are rewritten by
 the generator and **must not be edited by hand**. If you need a change,
@@ -32,6 +34,9 @@ src/sdk/templates/VRChat/
       LocalizableStringExtensions.inl
     Udon/
       UdonBehaviour.inl
+    SDK3/
+      Components/
+        VRCPickup.inl
 ```
 
 ## Quick example
@@ -199,7 +204,7 @@ values dumped from the shipping client:
 
 | C++ enum | Managed enum |
 |---|---|
-| `SyncType` (`None`, `Any`, `Continuous`, `Manual`, `NoVariableSync`) | `VRC.SDKBase.Networking.SyncType` |
+| `SyncType` (`Unknown`, `None`, `Continuous`, `Manual`) | `VRC.SDKBase.Networking.SyncType` |
 | `NetworkEventTarget` (`All`, `Owner`, `Others`, `Self`) | `VRC.Udon.Common.Interfaces.NetworkEventTarget` |
 | `EventTiming` (`Update`, `LateUpdate`, `PostLateUpdate`, `FixedUpdate`) | `VRC.Udon.Common.Enums.EventTiming` |
 
@@ -248,6 +253,80 @@ returns are passed through directly.
 `OnDrop()` and `OnNetworkReady()` are the managed entry points VRChat invokes,
 wrapped so a mod can trigger them directly.
 
+## VRCPickup (`VRC::SDK3::Components::VRCPickup`)
+
+`VRC.SDK3.Components.VRCPickup` (`VRCSDK3.dll`) is a thin subclass. The entire
+pickup API lives on its base `VRC.SDKBase.VRC_Pickup` (`VRCSDKBase.dll`), so both
+are wrapped and the SDK3 component derives from the base:
+
+```
+VRC::SDKBase::VrcPickup                 // VRC.SDKBase.VRC_Pickup
+  ^-- VRC::SDK3::Components::VRCPickup  // + the `version` field
+```
+
+`VRCPickup` adds only `version`; everything below is inherited. The managed
+chain continues `VRC_Pickup -> VRCNetworkBehaviour -> VRC_Interactable ->
+MonoBehaviour`, flattened to `Unity::MonoBehaviour` because method lookup walks
+the live class rather than the C++ base.
+
+### Mirrored enums
+
+| C++ enum | Managed enum |
+|---|---|
+| `PickupOrientation` (`Any`, `Grip`, `Gun`) | `VRC_Pickup.PickupOrientation` |
+| `AutoHoldMode` (`AutoDetect`, `Sometimes`, `No`, `Yes`) | `VRC_Pickup.AutoHoldMode` |
+| `PickupHand` (`None`, `Left`, `Right`) | `VRC_Pickup.PickupHand` |
+| `VrcBroadcastType` (10 members) | `VRC_EventHandler.VrcBroadcastType` |
+| `VRCPickup::Version` (`Version_1_0`, `Version_1_1`) | `VRCPickup.Version` |
+| `Unity::ForceMode` (`Force`, `Impulse`, `VelocityChange`, `Acceleration`) | `UnityEngine.ForceMode` |
+
+`ForceMode` lives in the Unity layer, not here — its literals are **not**
+contiguous (`Acceleration` is `5`), so it is spelled out explicitly.
+
+### Usage
+
+```cpp
+#include "sdk/VRChat/VRC/SDK3/Components/VRCPickup.h"
+
+if (Unity::GameObject go = Unity::GameObject::Find( "Prop" ))
+    if (VRC::SDK3::Components::VRCPickup pickup = go.GetComponent<VRC::SDK3::Components::VRCPickup>() ) {
+        ModLog::info( "held=%d hand=%d text=%s", pickup.IsHeld(), pickup.currentHand(),
+                      pickup.InteractionText().c_str() );
+
+        if ( pickup.IsHeld() )
+            pickup.Drop();
+    }
+```
+
+### Fields vs properties
+
+The same split as `VRCPlayerApi`:
+
+- Fields (`GetField`/`SetField`): `MomentumTransferMethod`, `DisallowTheft`,
+  `orientation`, `AutoHold`, `InteractionText`, `UseText`, `useEventBroadcastType`,
+  `pickupDropEventBroadcastType`, `UseDownEventName`, `UseUpEventName`,
+  `PickupEventName`, `DropEventName`, `ThrowVelocityBoost*`, `currentlyHeldBy`,
+  `currentLocalPlayer`, `pickupable`, `proximity`, `allowManipulationWhenEquipped`
+- Properties (`GetProperty`): `IsHeld`, `currentHand`, `currentPlayer`, `Proximity`
+
+`version` on the SDK3 component is a **field**, not a property. The decompiled
+source renders it with get/set accessors, but live metadata exposes a field and
+no `set_version` method, so it is accessed with `GetField`/`SetField`.
+
+### Methods
+
+- `Drop()`, `Drop(VRCPlayerApi instigator)`
+- `GenerateHapticEvent(duration = 0.25f, amplitude = 0.5f, frequency = 0.5f)`
+- `PlayHaptics()`
+- `VrcPickup::IsGlobalAutoHoldPickup(AutoHoldMode, PickupOrientation)` — static;
+  reports whether a global setting overrides the per-pickup value
+- `IsGlobalAutoHoldPickup()` — the instance overload of the same question
+
+Unity lifecycle methods (`Awake`, `Reset`, `OnDestroy`) and `ProvideEvents()`
+are not wrapped. `VrcPickup::OnAwake` / `ForceDrop` / `OnDestroyed` /
+`HapticEvent` static delegates are also unwrapped: their managed parameter is a
+closed generic delegate, which exact overload lookup cannot spell.
+
 ## Codegen conventions
 
 Generated VRChat headers follow a few rules:
@@ -262,3 +341,24 @@ Generated VRChat headers follow a few rules:
   `src/sdk/templates/mod_project_generator_vrchat.inl`, the `writes` list in
   `src/sdk/mod_project_generator_common.cpp`, and the
   `URK_SDK_TEMPLATE_FILES` list in `cmake/URKitSources.cmake`.
+
+## Local reference corpus
+
+A full decompile of the VRChat client is available on this machine at
+`C:\Users\Biscuit\Desktop\VRCDecompile` (`VRChat/`, `VRCCore/`, `VRCSDK2/`,
+`Unity/`, `Photon/`, `SteamVR/`). Treat it as a **read-only** reference — do not
+edit, reformat, or regenerate anything in it.
+
+Prefer it over runtime probing when wrapping a managed type. The `unity-runtime-explorer`
+MCP is bounded and lossy in ways that matter here:
+
+- Some enum literals are stripped from IL2CPP metadata, so `inspect_type` returns
+  `metadata_unavailable` and the members cannot be read from the live game at
+  all. `VRC.SDKBase.Networking.SyncType` is one of these.
+- `inspect_type` results can exceed the bridge message limit, forcing many
+  narrow queries for one type.
+- Accessibility (`public` vs `internal`) is not surfaced, so it is impossible to
+  tell a supported entry point from an internal one.
+
+Cross-check anything version-sensitive against live metadata: a decompile is a
+snapshot of one build and will lag behind the installed client.

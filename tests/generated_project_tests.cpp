@@ -421,6 +421,7 @@ constexpr std::string_view kVrcSdkBaseProbeSource = R"PROBE(
 #include "sdk/VRChat/VRC/SDKBase/Networking.h"
 #include "sdk/VRChat/VRC/Core/APIUser.h"
 #include "sdk/VRChat/VRC/Udon/UdonBehaviour.h"
+#include "sdk/VRChat/VRC/SDK3/Components/VRCPickup.h"
 
 #include <cstdint>
 #include <string>
@@ -472,6 +473,35 @@ void probe_vrc_sdkbase() {
     (void)behaviour.TryGetProgramVariable("Value", nullptr);
     (void)behaviour.Interact();
     (void)behaviour.OnNetworkReady();
+    (void)VRC::SDKBase::kVrcPickup;
+    (void)VRC::SDKBase::VrcPickup::unity_type();
+    (void)VRC::SDKBase::VRCPlayerApi::unity_type();
+    VRC::SDKBase::VrcPickup base{ nullptr };
+    VRC::SDK3::Components::VRCPickup pickup{ nullptr };
+    (void)pickup.gameObject();
+    (void)base.GetField<URK::Unity::ForceMode>( "MomentumTransferMethod" );
+    (void)base.GetField<VRC::SDKBase::PickupOrientation>( "orientation" );
+    (void)base.GetField<VRC::SDKBase::AutoHoldMode>( "AutoHold" );
+    (void)base.GetField<VRC::SDKBase::VrcBroadcastType>( "useEventBroadcastType" );
+    (void)base.GetField<URK::Unity::Transform>( "ExactGun" );
+    (void)base.GetField<URK::Unity::Component>( "currentlyHeldBy" );
+    (void)base.GetField<VRC::SDKBase::VRCPlayerApi>( "currentLocalPlayer" );
+    (void)base.GetProperty<bool>( "IsHeld" );
+    (void)base.GetProperty<VRC::SDKBase::PickupHand>( "currentHand" );
+    (void)base.GetProperty<VRC::SDKBase::VRCPlayerApi>( "currentPlayer" );
+    (void)base.GetProperty<float>( "Proximity" );
+    (void)base.Drop();
+    (void)base.Drop(VRC::SDKBase::VRCPlayerApi{ nullptr });
+    (void)base.GenerateHapticEvent();
+    (void)base.GenerateHapticEvent( 0.1f, 0.2f, 0.3f );
+    (void)base.PlayHaptics();
+    (void)base.IsGlobalAutoHoldPickup();
+    (void)VRC::SDKBase::VrcPickup::IsGlobalAutoHoldPickup( VRC::SDKBase::AutoHoldMode::No,
+                                                            VRC::SDKBase::PickupOrientation::Grip );
+    (void)VRC::SDK3::Components::kVrcPickupSdk3;
+    (void)VRC::SDK3::Components::VRCPickup::unity_type();
+    (void)pickup.GetField<VRC::SDK3::Components::VRCPickup::Version>( "version" );
+    (void)pickup.IsHeld();
     (void)Unity::last_error();
     Unity::clear_error();
 }
@@ -734,6 +764,8 @@ void CheckLayout(const GeneratedProject &project) {
         "sdk/VRChat/VRC/SDKBase/VRCPlayerAPI.h",
         "sdk/VRChat/VRC/SDKBase/Networking.h",
         "sdk/VRChat/VRC/Udon/UdonBehaviour.h",
+        "sdk/VRChat/VRC/SDKBase/VRC_Pickup.h",
+        "sdk/VRChat/VRC/SDK3/Components/VRCPickup.h",
         "mod/config/mod_config.h",
         "mod/modules/modules.h",
         "mod/modules/modules.cpp",

@@ -4,5 +4,7 @@
 #include "VRChat/VRC/Core/APIUser.inl"
 #include "VRChat/VRC/Localization/LocalizableStringExtensions.inl"
 #include "VRChat/VRC/Udon/UdonBehaviour.inl"
+#include "VRChat/VRC/SDKBase/VRC_Pickup.inl"
+#include "VRChat/VRC/SDK3/Components/VRCPickup.inl"
 #include "VRChat/HighlightsFX.inl"
 #include "VRChat/Menus.inl"

@@ -697,6 +697,14 @@ enum class SendMessageOptions : int {
     RequireReceiver = 0,
     DontRequireReceiver = 1
 };
+// UnityEngine.ForceMode. The literals are not contiguous, so they are spelled
+// out rather than relying on declaration order.
+enum class ForceMode : int {
+    Force = 0,
+    Impulse = 1,
+    VelocityChange = 2,
+    Acceleration = 5
+};
 using DiagnosticSink = void (*)(const char *);
 
 namespace detail {

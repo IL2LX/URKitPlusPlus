@@ -172,6 +172,8 @@ set(URK_SDK_TEMPLATE_FILES
     ${URK_SRC_DIR}/sdk/templates/VRChat/VRC/Core/APIUser.inl
     ${URK_SRC_DIR}/sdk/templates/VRChat/VRC/Localization/LocalizableStringExtensions.inl
     ${URK_SRC_DIR}/sdk/templates/VRChat/VRC/Udon/UdonBehaviour.inl
+    ${URK_SRC_DIR}/sdk/templates/VRChat/VRC/SDKBase/VRC_Pickup.inl
+    ${URK_SRC_DIR}/sdk/templates/VRChat/VRC/SDK3/Components/VRCPickup.inl
     ${URK_SRC_DIR}/sdk/templates/VRChat/HighlightsFX.inl
     ${URK_SRC_DIR}/sdk/templates/VRChat/Menus.inl
 )
