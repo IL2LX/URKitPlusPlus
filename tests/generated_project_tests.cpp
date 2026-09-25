@@ -387,6 +387,11 @@ void probe_sprite_loading() {
     (void)URK::Unity::Sprite::Create(created.handle(), URK::Unity::Rect{0.0f, 0.0f, 2.0f, 2.0f},
                                      URK::Unity::Vector2{0.5f, 0.5f}, 100.0f, 0,
                                      URK::Unity::Sprite::MeshType::FullRect);
+    (void)URK::Unity::Texture2D::MakeFromB64("iVBORw0KGgo=");
+    (void)URK::Unity::Sprite::LoadFromFile("icon.png");
+    (void)URK::Unity::Sprite::LoadFromFile("icon.png", 64.0f);
+    (void)URK::Unity::Sprite::MakeFromB64("iVBORw0KGgo=");
+    (void)URK::Unity::Sprite::MakeFromB64("iVBORw0KGgo=", 64.0f);
 }
 
 void keep_referenced(URK::Unity::GameObject object) {

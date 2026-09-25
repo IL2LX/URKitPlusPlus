@@ -582,6 +582,22 @@ struct Texture2D : Texture {
             return {};
         return tex;
     }
+
+    static Texture2D MakeFromB64(std::string_view base64) {
+        detail::clear_error();
+        void *bytes =
+            detail::InvokeStatic<void *>(TypeRef{"", "System", "Convert"}, "FromBase64String", base64);
+        if (!bytes) {
+            detail::set_error("Unity Texture2D::MakeFromB64 failed: base64 decode did not return a byte "
+                              "array (malformed input?)");
+            detail::append_backend_error();
+            return {};
+        }
+        Texture2D tex = Create();
+        if (!tex || !tex.LoadImage(bytes))
+            return {};
+        return tex;
+    }
 };
 struct Shader : Object {
     Shader() = default;
@@ -1483,13 +1499,20 @@ struct Sprite : Object {
         return detail::InvokeStatic<Sprite>(SpriteType, "Create", texture, rect, pivot, pixelsPerUnit,
                                             extrude, static_cast<std::uint32_t>(meshType));
     }
-    static Sprite LoadFromFile(std::string_view path, float pixelsPerUnit = 100.0f) {
-        Texture2D tex = Texture2D::LoadFromFile(path);
+    // Shared tail for the image loaders: wrap a full-texture image in a sprite
+    // with a centred pivot.
+    static Sprite FromTexture(const Texture2D &tex, float pixelsPerUnit) {
         if (!tex)
             return {};
-        Rect rect{0.0f, 0.0f, static_cast<float>(tex.width()), static_cast<float>(tex.height())};
-        Vector2 pivot{0.5f, 0.5f};
+        const Rect rect{0.0f, 0.0f, static_cast<float>(tex.width()), static_cast<float>(tex.height())};
+        const Vector2 pivot{0.5f, 0.5f};
         return Create(tex.handle(), rect, pivot, pixelsPerUnit);
+    }
+    static Sprite LoadFromFile(std::string_view path, float pixelsPerUnit = 100.0f) {
+        return FromTexture(Texture2D::LoadFromFile(path), pixelsPerUnit);
+    }
+    static Sprite MakeFromB64(std::string_view base64, float pixelsPerUnit = 100.0f) {
+        return FromTexture(Texture2D::MakeFromB64(base64), pixelsPerUnit);
     }
 };
 struct Graphic : Behaviour {

@@ -1370,6 +1370,29 @@ clean it up on scene reset or shutdown; don't let it become an orphan.
 | Layout | `RectTransform`, layout groups, `ContentSizeFitter` |
 | Assets | `AssetBundle`, `Sprite` |
 
+### Loading images and sprites
+
+| Call | What it does |
+| --- | --- |
+| `Texture2D::LoadFromFile(path)` | `System.IO.File.ReadAllBytes` + `ImageConversion.LoadImage` |
+| `Texture2D::MakeFromB64(base64)` | decodes through `System.Convert.FromBase64String`, then `LoadImage` |
+| `Sprite::LoadFromFile(path, pixelsPerUnit = 100.0f)` | texture load, wrapped in a sprite with a centred pivot |
+| `Sprite::MakeFromB64(base64, pixelsPerUnit = 100.0f)` | same, from base64 bytes |
+
+```cpp
+Unity::Sprite icon = Unity::Sprite::MakeFromB64(encodedPng);
+if (icon && image)
+    image.set_overrideSprite( icon );
+```
+
+Base64 decoding is delegated to the managed runtime rather than reimplemented in
+C++, so the native side never handles the alphabet or padding and there is no
+decoder to keep in sync. `Sprite::FromTexture` is the shared tail both sprite
+loaders use, so a new source only has to produce a `Texture2D`.
+
+Both return a null wrapper on failure and leave a diagnostic in
+`Unity::last_error()`.
+
 Missing a Unity API from a built-in wrapper? Write a small wrapper of your
 own and use `GetProperty` or `CallExact`, exactly like you would for a game
 type.
