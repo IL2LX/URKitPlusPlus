@@ -40,6 +40,15 @@ namespace VRC::SDKBase
 
         // --- Fields
 
+        Unity::GameObject GameObject() const {
+            return GetProperty<Unity::GameObject>("gameObject");
+        }
+
+        std::string GameObjectName() const {
+            const Unity::GameObject go = GameObject();
+            return go ? go.name() : std::string{};
+        }
+
         Unity::ForceMode MomentumTransferMethod() const {
             return GetField<Unity::ForceMode>("MomentumTransferMethod");
         }

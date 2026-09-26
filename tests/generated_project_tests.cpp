@@ -55,12 +55,19 @@ std::string Quote(const std::string &value) {
 bool SyntaxCheck(const fs::path &projectRoot, const fs::path &source, const fs::path &workingDirectory) {
     const std::string root = projectRoot.string();
     std::string command = Quote(URK_TEST_CXX_COMPILER);
+    // These must be real compilations, not syntax-only passes: an undefined base
+    // class or a bad overload is a semantic error, and /Zs and -fsyntax-only both
+    // skip semantic analysis entirely.
+    const std::string objectDir = (workingDirectory / "urk_probe_obj").string();
+    std::error_code dirError;
+    fs::create_directories(objectDir, dirError);
     if (CompilerIsMsvc()) {
-        command += " /nologo /std:c++20 /Zs /EHsc /permissive- /DWIN32_LEAN_AND_MEAN /DNOMINMAX";
+        command += " /nologo /std:c++20 /c /EHsc /permissive- /DWIN32_LEAN_AND_MEAN /DNOMINMAX";
         command += " /I" + Quote(root) + " /I" + Quote((projectRoot / "mod").string());
-        command += " /TP " + Quote(source.string());
+        command += " /Fo" + Quote((fs::path(objectDir) / "urk_probe.obj").string()) + " /TP " + Quote(source.string());
     } else {
-        command += " -std=c++20 -fsyntax-only -DWIN32_LEAN_AND_MEAN -DNOMINMAX";
+        command += " -std=c++20 -c -o " + Quote((fs::path(objectDir) / "urk_probe.o").string());
+        command += " -DWIN32_LEAN_AND_MEAN -DNOMINMAX";
         command += " -I" + Quote(root) + " -I" + Quote((projectRoot / "mod").string());
         command += " -x c++ " + Quote(source.string());
     }
@@ -431,6 +438,111 @@ extern "C" int urk_il2cpp_helper_probe(void *target) {
 }
 )PROBE";
 
+constexpr std::string_view kVrcGeneratedProbeSource = R"PROBE(
+#include "sdk/VRChat/VRC/SDKBase/VRC_SceneDescriptor.h"
+#include "sdk/VRChat/VRC/SDKBase/VRC_Serialization.h"
+#include "sdk/VRChat/VRC/SDKBase/VRC_AvatarPedestal.h"
+#include "sdk/VRChat/VRC/SDKBase/VRC_SpatialAudioSource.h"
+#include "sdk/VRChat/VRC/SDKBase/VRC_StereoObject.h"
+#include "sdk/VRChat/VRC/SDKBase/VRCLayers.h"
+#include "sdk/VRChat/VRC/Core/UnityVersion.h"
+#include "sdk/VRChat/VRC/Core/Endpoints.h"
+#include "sdk/VRChat/VRC/Core/Logger.h"
+#include "sdk/VRChat/VRC/Core/ConfigManager.h"
+#include "sdk/VRChat/VRC/Core/VRCLogger.h"
+
+#include <cstdint>
+#include <string>
+
+namespace {
+
+void probe_vrc_generated() {
+    using namespace VRC::SDKBase;
+    using namespace VRC::Core;
+
+    (void)kVrcSceneDescriptor.resolve_class();
+    (void)kVrcSerialization.resolve_class();
+    (void)kVrcAvatarPedestal.resolve_class();
+    (void)kVrcSpatialAudioSource.resolve_class();
+    (void)kVrcStereoObject.resolve_class();
+    (void)kVrcLayers.resolve_class();
+    (void)kUnityVersion.resolve_class();
+    (void)kEndpoints.resolve_class();
+    (void)kLogger.resolve_class();
+    (void)kVRCLogger.resolve_class();
+    (void)kConfigManager.resolve_class();
+
+    VrcSceneDescriptor scene{nullptr};
+    (void)scene.capacity();
+    (void)scene.Name();
+    (void)scene.unityVersion();
+    (void)scene.NSFW();
+    (void)scene.releasePublic();
+    (void)scene.DrawDistance();
+    (void)scene.gravity();
+    (void)scene.SpawnPosition();
+    (void)scene.ReferenceCamera();
+    (void)scene.spawns();
+    (void)scene.udonProducts();
+    scene.set_capacity(8);
+    scene.set_NSFW(true);
+    scene.set_spawns(nullptr);
+    scene.set_udonProducts(nullptr);
+    scene.set_Name("x");
+    scene.set_gravity(URK::Unity::Vector3{});
+    scene.FindNetworkIDGameObject("path", true);
+    scene.PositionPortraitCamera(URK::Unity::Transform{nullptr});
+    VrcSceneDescriptor::GetPrefab("x");
+    VrcSceneDescriptor::GetMaterial("x");
+
+    VrcAvatarPedestal pedestal{nullptr};
+    (void)pedestal.blueprintId();
+    (void)pedestal.scale();
+    (void)pedestal.avatarImage();
+    pedestal.SwitchAvatar("blueprint");
+    pedestal.SetAvatarUse(VRC::SDKBase::VRCPlayerApi{});
+
+    VrcSpatialAudioSource audio{nullptr};
+    (void)audio.Gain();
+    (void)audio.Far();
+    (void)audio.Near();
+    (void)audio.VolumetricRadius();
+    (void)audio.EnableSpatialization();
+
+    VrcStereoObject stereo{nullptr};
+    (void)stereo.eye();
+
+    (void)VrcLayers(0);
+
+    (void)VrcSerialization::GetGameObjectPath(URK::Unity::GameObject{nullptr});
+    (void)VrcSerialization::GetGameObjectPathFallback(URK::Unity::GameObject{nullptr});
+    (void)VrcSerialization::FindGameObject("path");
+    (void)VrcSerialization::ParameterEncoder(nullptr);
+    VrcSerialization::RegisterType(nullptr);
+
+    (void)UnityVersion::TryParse("2022.3.22f2", nullptr);
+    (void)UnityVersion::Parse("2022.3.22f2");
+
+    (void)URK::Unity::Object::StaticGetField<std::string>(kEndpoints, "World");
+
+    VRCLogger::SetLoggingMode(0);
+    (void)VRCLogger::GetLogDirectory();
+    (void)VRCLogger::GenerateOutputLogFilename();
+    (void)VRCLogger::IsLogPathValid("x");
+    (void)VRCLogger::GetCurrentLogLevel();
+    (void)VRCLogger::LogFilePath();
+    (void)VRCLogger::IsPathOverridden();
+    (void)VRCLogger::GlobalLogger();
+    (void)VRCLogger::GetLogger("x");
+    VRCLogger::RemoveStaleLogs();
+    VRCLogger::OverrideLogFilePath("x");
+
+    Logger::AssignLoggerProvider(nullptr);
+    ConfigManager::WorldConfigIDChange("id");
+    ConfigManager::ClientConfigIDChange("id");
+}
+} // namespace
+)PROBE";
 constexpr std::string_view kVrcSdkBaseProbeSource = R"PROBE(
 #include "sdk/VRChat/VRC/SDKBase/Networking.h"
 #include "sdk/VRChat/VRC/Core/APIUser.h"
@@ -838,6 +950,12 @@ int main(int argc, char **argv) {
         Check(SyntaxCheck(project.root, vrcProbe, project.root),
               project.label + ": generated VRChat SDKBase header compiles against real call sites");
         fs::remove(vrcProbe, cleanup);
+
+        const fs::path genProbe = project.root / "urk_probe_vrc_generated.cpp";
+        Write(genProbe, kVrcGeneratedProbeSource);
+        Check(SyntaxCheck(project.root, genProbe, project.root),
+              project.label + ": generated VRChat metadata-driven headers compile against real call sites");
+        fs::remove(genProbe, cleanup);
 
         const fs::path moduleProbe = project.root / "urk_probe_modules.cpp";
         Write(moduleProbe, kModulesProbeSource);

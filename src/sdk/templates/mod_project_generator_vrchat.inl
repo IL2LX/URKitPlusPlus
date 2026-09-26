@@ -8,3 +8,5 @@
 #include "VRChat/VRC/SDK3/Components/VRCPickup.inl"
 #include "VRChat/HighlightsFX.inl"
 #include "VRChat/Menus.inl"
+#include "VRChat/vrchat_generated_emit.inl"
+#include "VRChat/vrchat_generated_table.inl"

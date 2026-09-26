@@ -1,0 +1,172 @@
+{
+  "source": "unity-runtime-explorer live MCP, IL2CPP backend, VRChat 2022.3.22f2-DWR",
+  "captured": "VRC_SceneDescriptor + VRC_Serialization complete; VRC_AvatarPedestal + VRC_SpatialAudioSource complete",
+  "types": {
+    "VRC.SDKBase.VRC_Serialization": {
+      "image": "VRCSDKBase.dll", "ns": "VRC.SDKBase", "cls": "VRC_Serialization",
+      "parent": "System.Object", "abstract": false, "static": false, "component": false, "unity_object": false, "iface": false,
+      "field": [
+        { "n": "_allowedTypes", "t": "System.Collections.Generic.HashSet<System.Type>", "s": true },
+        { "n": "_allowedPluginTypes", "t": "System.Collections.Generic.HashSet<System.Type>", "s": true },
+        { "n": "_networkSurrogateSelector", "t": "System.Runtime.Serialization.ISurrogateSelector", "s": true }
+      ],
+      "property": [
+        { "n": "AllowPluginTypes", "t": "System.Boolean", "s": true },
+        { "n": "SurrogateSelector", "t": "System.Runtime.Serialization.ISurrogateSelector", "s": true },
+        { "n": "Dispatcher", "t": "VRC.SDKBase.VRC_EventDispatcher", "s": true }
+      ],
+      "methods": [
+        { "n": "get_AllowPluginTypes", "pt": [], "rt": "System.Boolean", "s": true },
+        { "n": "set_AllowPluginTypes", "pt": ["System.Boolean"], "rt": "System.Void", "s": true },
+        { "n": "get_SurrogateSelector", "pt": [], "rt": "System.Runtime.Serialization.ISurrogateSelector", "s": true },
+        { "n": "RegisterPluginType", "pt": ["System.Type"], "rt": "System.Void", "s": true },
+        { "n": "RegisterType", "pt": ["System.Type"], "rt": "System.Void", "s": true },
+        { "n": "ParameterEncoder", "pt": ["System.Object[]"], "rt": "System.Byte[]", "s": true },
+        { "n": "ParameterDecoder", "pt": ["System.Byte[]", "System.Boolean"], "rt": "System.Object[]", "s": true },
+        { "n": "get_Dispatcher", "pt": [], "rt": "VRC.SDKBase.VRC_EventDispatcher", "s": true },
+        { "n": "GetGameObjectPathFallback", "pt": ["UnityEngine.GameObject"], "rt": "System.String", "s": true },
+        { "n": "GetGameObjectPath", "pt": ["UnityEngine.GameObject"], "rt": "System.String", "s": true },
+        { "n": "FindGameObject", "pt": ["System.String"], "rt": "UnityEngine.GameObject", "s": true }
+      ]
+    },
+    "VRC.SDKBase.VRC_AvatarPedestal": {
+      "image": "VRCSDKBase.dll", "ns": "VRC.SDKBase", "cls": "VRC_AvatarPedestal",
+      "parent": "VRC.SDKBase.Network.VRCNetworkBehaviour", "abstract": true, "static": false, "component": true, "unity_object": true, "iface": false,
+      "field": [
+        { "n": "blueprintId", "t": "System.String", "s": false },
+        { "n": "grantBlueprintAccess", "t": "System.Boolean", "s": false },
+        { "n": "Placement", "t": "UnityEngine.Transform", "s": false },
+        { "n": "ChangeAvatarsOnUse", "t": "System.Boolean", "s": false },
+        { "n": "scale", "t": "System.Single", "s": false },
+        { "n": "OnReceiveAvatarImage", "t": "System.Action", "s": false },
+        { "n": "avatarImage", "t": "UnityEngine.Texture2D", "s": false },
+        { "n": "Instance", "t": "UnityEngine.GameObject", "s": false },
+        { "n": "Instantiate", "t": "VRC.SDKBase.VRC_AvatarPedestal.InstantiationDelegate", "s": true }
+      ],
+      "property": [],
+      "methods": [
+        { "n": "Awake", "pt": [], "rt": "System.Void", "s": false },
+        { "n": "SwitchAvatar", "pt": [], "rt": "System.Void", "s": false },
+        { "n": "SetAvatarUse", "pt": [], "rt": "System.Void", "s": false }
+      ]
+    },
+    "VRC.SDKBase.VRC_SpatialAudioSource": {
+      "image": "VRCSDKBase.dll", "ns": "VRC.SDKBase", "cls": "VRC_SpatialAudioSource",
+      "parent": "UnityEngine.MonoBehaviour", "abstract": true, "static": false, "component": true, "unity_object": true, "iface": false,
+      "field": [
+        { "n": "Gain", "t": "System.Single", "s": false },
+        { "n": "Far", "t": "System.Single", "s": false },
+        { "n": "Near", "t": "System.Single", "s": false },
+        { "n": "VolumetricRadius", "t": "System.Single", "s": false },
+        { "n": "EnableSpatialization", "t": "System.Boolean", "s": false },
+        { "n": "UseAudioSourceVolumeCurve", "t": "System.Boolean", "s": false },
+        { "n": "Initialize", "t": "VRC.SDKBase.VRC_SpatialAudioSource.InitializationDelegate", "s": true },
+        { "n": "_source", "t": "UnityEngine.AudioSource", "s": false }
+      ],
+      "property": [],
+      "methods": [
+        { "n": "Awake", "pt": [], "rt": "System.Void", "s": false },
+        { "n": "OnDrawGizmosSelected", "pt": [], "rt": "System.Void", "s": false }
+      ]
+    },
+    "VRC.SDKBase.VRC_SceneDescriptor": {
+      "image": "VRCSDKBase.dll", "ns": "VRC.SDKBase", "cls": "VRC_SceneDescriptor",
+      "parent": "UnityEngine.MonoBehaviour", "abstract": true, "static": false, "component": true, "unity_object": true, "iface": false,
+      "field": [
+        { "n": "spawns", "t": "UnityEngine.Transform[]", "s": false },
+        { "n": "spawnRadius", "t": "System.Single", "s": false },
+        { "n": "spawnOrder", "t": "VRC.SDKBase.VRC_SceneDescriptor.SpawnOrder", "s": false },
+        { "n": "spawnOrientation", "t": "VRC.SDKBase.VRC_SceneDescriptor.SpawnOrientation", "s": false },
+        { "n": "ReferenceCamera", "t": "UnityEngine.GameObject", "s": false },
+        { "n": "RespawnHeightY", "t": "System.Single", "s": false },
+        { "n": "ObjectBehaviourAtRespawnHeight", "t": "VRC.SDKBase.VRC_SceneDescriptor.RespawnHeightBehaviour", "s": false },
+        { "n": "ForbidUserPortals", "t": "System.Boolean", "s": false },
+        { "n": "interactThruLayers", "t": "System.Int32", "s": false },
+        { "n": "autoSpatializeAudioSources", "t": "System.Boolean", "s": false },
+        { "n": "gravity", "t": "UnityEngine.Vector3", "s": false },
+        { "n": "layerCollisionArr", "t": "System.Boolean[]", "s": false },
+        { "n": "capacity", "t": "System.Int32", "s": false },
+        { "n": "contentSex", "t": "System.Boolean", "s": false },
+        { "n": "contentViolence", "t": "System.Boolean", "s": false },
+        { "n": "contentGore", "t": "System.Boolean", "s": false },
+        { "n": "contentOther", "t": "System.Boolean", "s": false },
+        { "n": "releasePublic", "t": "System.Boolean", "s": false },
+        { "n": "unityVersion", "t": "System.String", "s": false },
+        { "n": "udonProducts", "t": "System.Collections.Generic.List<System.String>", "s": false },
+        { "n": "Name", "t": "System.String", "s": false },
+        { "n": "NSFW", "t": "System.Boolean", "s": false },
+        { "n": "SpawnPosition", "t": "UnityEngine.Vector3", "s": false },
+        { "n": "SpawnLocation", "t": "UnityEngine.Transform", "s": false },
+        { "n": "DrawDistance", "t": "System.Single", "s": false },
+        { "n": "useAssignedLayers", "t": "System.Boolean", "s": false },
+        { "n": "DynamicPrefabs", "t": "System.Collections.Generic.List<UnityEngine.GameObject>", "s": false },
+        { "n": "sDynamicPrefabs", "t": "System.Collections.Generic.Dictionary<System.String,UnityEngine.GameObject>", "s": true },
+        { "n": "DynamicMaterials", "t": "System.Collections.Generic.List<UnityEngine.Material>", "s": false },
+        { "n": "sDynamicMaterials", "t": "System.Collections.Generic.Dictionary<System.String,UnityEngine.Material>", "s": true },
+        { "n": "LightMapsNear", "t": "UnityEngine.Texture2D[]", "s": false },
+        { "n": "LightMapsFar", "t": "UnityEngine.Texture2D[]", "s": false },
+        { "n": "LightMode", "t": "UnityEngine.LightmapsMode", "s": false },
+        { "n": "RenderAmbientEquatorColor", "t": "UnityEngine.Color", "s": false },
+        { "n": "RenderAmbientGroundColor", "t": "UnityEngine.Color", "s": false },
+        { "n": "RenderAmbientIntensity", "t": "System.Single", "s": false },
+        { "n": "RenderAmbientLight", "t": "UnityEngine.Color", "s": false },
+        { "n": "RenderAmbientMode", "t": "UnityEngine.Rendering.AmbientMode", "s": false },
+        { "n": "RenderAmbientProbe", "t": "UnityEngine.Rendering.SphericalHarmonicsL2", "s": false },
+        { "n": "RenderAmbientSkyColor", "t": "UnityEngine.Color", "s": false },
+        { "n": "RenderFog", "t": "System.Boolean", "s": false },
+        { "n": "RenderFogColor", "t": "UnityEngine.Color", "s": false },
+        { "n": "RenderFogMode", "t": "UnityEngine.FogMode", "s": false },
+        { "n": "RenderFogDensity", "t": "System.Single", "s": false },
+        { "n": "RenderFogLinearStart", "t": "System.Single", "s": false },
+        { "n": "RenderFogLinearEnd", "t": "System.Single", "s": false },
+        { "n": "RenderHaloStrength", "t": "System.Single", "s": false },
+        { "n": "RenderFlareFadeSpeed", "t": "System.Single", "s": false },
+        { "n": "RenderFlareStrength", "t": "System.Single", "s": false },
+        { "n": "RenderCustomReflection", "t": "UnityEngine.Cubemap", "s": false },
+        { "n": "RenderDefaultReflectionMode", "t": "UnityEngine.Rendering.DefaultReflectionMode", "s": false },
+        { "n": "RenderDefaultReflectionResolution", "t": "System.Int32", "s": false },
+        { "n": "RenderReflectionBounces", "t": "System.Int32", "s": false },
+        { "n": "RenderReflectionIntensity", "t": "System.Single", "s": false },
+        { "n": "RenderSkybox", "t": "UnityEngine.Material", "s": false },
+        { "n": "NetworkIDs", "t": "System.Collections.Generic.List<VRC.SDKBase.Network.NetworkIDPair>", "s": false },
+        { "n": "rootSceneGameObjectsBuffer", "t": "System.Collections.Generic.List<UnityEngine.GameObject>", "s": true },
+        { "n": "Initialize", "t": "VRC.SDKBase.VRC_SceneDescriptor.IntializationDelegate", "s": true },
+        { "n": "apiWorld", "t": "System.Object", "s": false },
+        { "n": "_instance", "t": "VRC.SDKBase.VRC_SceneDescriptor", "s": true },
+        { "n": "_bundleUnityMajorVersion", "t": "System.Int32", "s": false },
+        { "n": "_scene", "t": "UnityEngine.SceneManagement.Scene", "s": false },
+        { "n": "portraitCameraPositionOffset", "t": "UnityEngine.Vector3", "s": false },
+        { "n": "portraitCameraRotationOffset", "t": "UnityEngine.Quaternion", "s": false }
+      ],
+      "property": [
+        { "n": "NetworkIDCollection", "t": "System.Collections.Generic.List<VRC.SDKBase.Network.NetworkIDPair>", "s": false },
+        { "n": "NetworkIDLookup", "t": "System.Collections.Generic.Dictionary<UnityEngine.GameObject,VRC.SDKBase.Network.NetworkIDPair>", "s": false },
+        { "n": "Instance", "t": "VRC.SDKBase.VRC_SceneDescriptor", "s": true },
+        { "n": "Exists", "t": "System.Boolean", "s": true },
+        { "n": "BundleUnityMajorVersion", "t": "System.Int32", "s": false },
+        { "n": "Scene", "t": "UnityEngine.SceneManagement.Scene", "s": false }
+      ],
+      "methods": [
+        { "n": "Awake", "pt": [], "rt": "System.Void", "s": false },
+        { "n": "FindNetworkIDGameObject", "pt": ["System.String", "System.Boolean"], "rt": "UnityEngine.GameObject", "s": false },
+        { "n": "GetMaterial", "pt": ["System.String"], "rt": "UnityEngine.Material", "s": true },
+        { "n": "GetNetworkIDGameObjectPath", "pt": ["UnityEngine.GameObject", "System.Collections.Generic.HashSet<System.String>"], "rt": "System.String", "s": false },
+        { "n": "GetNetworkIDObjects", "pt": ["System.Collections.Generic.List<VRC.SDKBase.INetworkID>"], "rt": "System.Void", "s": false },
+        { "n": "GetPrefab", "pt": ["System.String"], "rt": "UnityEngine.GameObject", "s": true },
+        { "n": "GetValidatedSpawnList", "pt": [], "rt": "System.Collections.Generic.List<UnityEngine.Transform>", "s": false },
+        { "n": "OnDestroy", "pt": [], "rt": "System.Void", "s": false },
+        { "n": "PositionPortraitCamera", "pt": ["UnityEngine.Transform"], "rt": "System.Void", "s": false },
+        { "n": "get_BundleUnityMajorVersion", "pt": [], "rt": "System.Int32", "s": false },
+        { "n": "get_Exists", "pt": [], "rt": "System.Boolean", "s": true },
+        { "n": "get_Instance", "pt": [], "rt": "VRC.SDKBase.VRC_SceneDescriptor", "s": true },
+        { "n": "get_NetworkIDCollection", "pt": [], "rt": "System.Collections.Generic.List<VRC.SDKBase.Network.NetworkIDPair>", "s": false },
+        { "n": "get_NetworkIDLookup", "pt": [], "rt": "System.Collections.Generic.Dictionary<UnityEngine.GameObject,VRC.SDKBase.Network.NetworkIDPair>", "s": false },
+        { "n": "get_Scene", "pt": [], "rt": "UnityEngine.SceneManagement.Scene", "s": false },
+        { "n": "set_BundleUnityMajorVersion", "pt": ["System.Int32"], "rt": "System.Void", "s": false },
+        { "n": "set_NetworkIDCollection", "pt": ["System.Collections.Generic.List<VRC.SDKBase.Network.NetworkIDPair>"], "rt": "System.Void", "s": false },
+        { "n": "set_NetworkIDLookup", "pt": ["System.Collections.Generic.Dictionary<UnityEngine.GameObject,VRC.SDKBase.Network.NetworkIDPair>"], "rt": "System.Void", "s": false },
+        { "n": "set_Scene", "pt": ["UnityEngine.SceneManagement.Scene"], "rt": "System.Void", "s": false }
+      ]
+    }
+  }
+}
