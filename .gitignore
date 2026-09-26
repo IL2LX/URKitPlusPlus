@@ -1,3 +1,8 @@
 /.vs
 /out
 CHANGELOG.md
+
+# Intermediate capture. Regenerated from the decompile by
+# tools/extract_sdk_capture.ps1, which tools/regen_vrchat_table.ps1 runs for you.
+# The committed vrchat_generated_*.inl are the real output and are tracked.
+tools/vrchat_slice.decompile.json

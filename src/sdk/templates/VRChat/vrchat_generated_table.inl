@@ -298,7 +298,10 @@ inline const TypeSpec kConfigManager = {
     nullptr, 0, nullptr, 0,
     kConfigManagerMethods, static_cast<int>(std::size(kConfigManagerMethods)),
 };
+#include "vrchat_generated_types.inl"
 } // namespace VrcGenerated
+
+#include "vrchat_generated_factories.inl"
 
 namespace {
 std::string VRChatGeneratedSceneDescriptor() {

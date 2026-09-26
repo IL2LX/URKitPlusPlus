@@ -5,6 +5,9 @@ generated into every project targeting VRChat. Most sit under `sdk/VRChat/VRC/`
 and mirror the managed VRChat SDK namespaces; two more sit directly under
 `sdk/VRChat/`.
 
+The eight hand-written templates are listed first. Everything after them is
+[metadata-driven](#metadata-driven-types) and generated from a capture.
+
 | Generated header | Managed type |
 |---|---|
 | `sdk/VRChat/VRC/SDKBase/VRCPlayerAPI.h` | `VRC.SDKBase.VRCPlayerApi` |
@@ -27,6 +30,11 @@ and mirror the managed VRChat SDK namespaces; two more sit directly under
 | `sdk/VRChat/VRC/Core/Logger.h` | `VRC.Core.Logger` |
 | `sdk/VRChat/VRC/Core/ConfigManager.h` | `VRC.Core.ConfigManager` |
 | `sdk/VRChat/VRC/Core/VRCLogger.h` | `VRC.Core.VRCLogger` |
+
+Plus **415 further VRChat SDK type wrappers** generated from a capture — the
+whole of `VRC.SDKBase`, `VRC.SDK3`, `VRC.Core`, `VRC.Dynamics`,
+`VRC.InventoryEffects`, `VRC.Utility`, `VRC.Economy` and `VRC.Localization`.
+See [Metadata-driven types](#metadata-driven-types).
 
 These fall into three groups, each with a different authoring style:
 
@@ -417,10 +425,19 @@ project.
 
 ## Metadata-driven types
 
-Eleven headers are not hand-written. They are emitted at build time by
+426 headers are not hand-written. They are emitted at build time by
 `VrcGenerated::EmitType` (`vrchat_generated_emit.inl`) from a table of
-`TypeSpec` entries captured from live IL2CPP metadata
-(`vrchat_generated_table.inl`, VRChat 2022.3.22f2-DWR).
+`TypeSpec` entries. Eleven of those entries are hand-maintained in
+`vrchat_generated_table.inl` and were captured from live IL2CPP metadata
+(VRChat 2022.3.22f2-DWR). The other 415 are generated into
+`vrchat_generated_types.inl` by `tools/regen_vrchat_table.ps1`.
+
+A generated project lands ~490 headers under `sdk/VRChat/`, 346 of them VRChat
+SDK type wrappers, covering `VRC.SDKBase`, `VRC.SDK3`, `VRC.Core`, `VRC.Dynamics`,
+`VRC.InventoryEffects`, `VRC.Utility`, `VRC.Economy` and `VRC.Localization`.
+That includes the whole PhysBone, Contact and VRC-constraint families.
+
+### Hand-maintained entries
 
 | Header | C++ name | Kind | Image |
 |---|---|---|---|
@@ -435,6 +452,9 @@ Eleven headers are not hand-written. They are emitted at build time by
 | `VRC/Core/Logger.h` | `VRC::Core::Logger` | static class | `VRCCore-Standalone.dll` |
 | `VRC/Core/ConfigManager.h` | `VRC::Core::ConfigManager` | static class | `VRCCore-Standalone.dll` |
 | `VRC/Core/VRCLogger.h` | `VRC::Core::VRCLogger` | static class | `VRC.Logging.dll` |
+
+These are excluded from regeneration because they carry `alt_name` resilience
+(see [Emission rules](#emission-rules)) that regenerated data cannot reproduce.
 
 ### Emission rules
 
@@ -466,14 +486,58 @@ Both exist to avoid silently binding to the wrong overload:
 
 ### Adding a type
 
-Append a `TypeSpec` to `vrchat_generated_table.inl` plus a `VRChatGenerated*()`
-factory, and register the output in the `writes` list in
-`src/sdk/mod_project_generator_common.cpp`. No `.inl` per type is needed.
+Do not hand-write a `TypeSpec`. Run the pipeline:
 
-Note the captured table is a snapshot of one build. `VRC_SceneDescriptor` and
-the `VRC.Core` logging/config types in particular are VRChat-internal and can
-shift between releases; re-capture from live metadata rather than hand-editing
-the table.
+```powershell
+cmake --build out\build\msvc-release --config Release --target urk-vrchat-table-gen
+powershell -File tools\regen_vrchat_table.ps1
+```
+
+`regen_vrchat_table.ps1` runs both halves and splices the results into the three
+files the generator reads:
+
+| Stage | File | Does |
+|---|---|---|
+| extract | `tools/extract_sdk_capture.ps1` | decompiled C# -> `tools/vrchat_slice.decompile.json` |
+| generate | `src/tools/vrchat_table_gen.cpp` | capture -> specs, factories, `writes` rows |
+| splice | `tools/regen_vrchat_table.ps1` | writes `vrchat_generated_types.inl`, `vrchat_generated_factories.inl`, and the `writes` block |
+
+The `writes` block is delimited by `// >>> VRCHAT_GENERATED_WRITES >>>`, so
+re-running replaces it wholesale.
+
+The tool takes three exclusion inputs, and all of them are derived rather than
+listed so they cannot drift:
+
+- **hand-written types** — read out of the `TypeSpec` entries already in
+  `vrchat_generated_table.inl`, so their `alt_name` resilience survives.
+- **claimed header paths** — read out of the `writes` list, compared
+  case-insensitively because the ledger does. A generated type that lands on a
+  path a hand-written template owns yields rather than producing a duplicate.
+- **collisions** — two managed types can reduce to one C++ symbol
+  (`VRCStation` exists in both `VRC.SDKBase` and `VRC.SDK3.Components`). The tool
+  reports these on stderr and fails the build rather than emitting a
+  redefinition.
+
+Field-versus-property classification comes from the interop plumbing, not from
+casing: `NativeFieldInfoPtr_<name>` is a field, `NativeMethodInfoPtr_get_<name>`
+is a property. Casing gets VRChat's statics wrong.
+
+The `image` string is read from the decompiled `// Assembly:` line, because that
+is what the runtime resolves the type by. Guessing it from the folder is wrong:
+`VRC.Core` is spread across `VRCCore-Standalone.dll`, `VRC.Logging.dll`,
+`VRC.Utility` and others. A type in an editor assembly is dropped, since the
+client never loads it.
+
+**Known fidelity limits.** The emitter's `ManagedToCpp` has no collection or
+array handling, so `List<T>`, `Dictionary<K,V>` and `T[]` members are emitted as
+`void*` and lose their element type. The tool reports every such type on stderr.
+Enum literals are still all zero. Both are reported rather than hidden, and
+neither affects whether a type resolves.
+
+The capture is derived from the decompile, not from live IL2CPP metadata. The
+image names it produces were cross-checked against the eleven live-captured
+entries and agree, but a re-capture from `unity-runtime-explorer` remains the
+authoritative path and the place the enum literals get fixed.
 
 ## Codegen conventions
 
@@ -492,7 +556,8 @@ Generated VRChat headers follow a few rules:
   The third is easy to forget and only shows up as an IDE/`HEADER_FILE_ONLY`
   inconsistency — the build still succeeds, because the `.inl` is reached
   transitively through `mod_project_generator_vrchat.inl`.
-- When adding a new **metadata-driven type**, no new `.inl` is needed. See
+- When adding a new **metadata-driven type**, no new `.inl` and no new
+  `TypeSpec` is needed. Re-run the pipeline. See
   [Adding a type](#adding-a-type).
 
 ## Local reference corpus

@@ -219,6 +219,17 @@ if (URK_BUILD_SDK_TOOL)
         target_link_libraries(URKitUpdater PRIVATE bcrypt winhttp)
     endif()
 
+    # Turns a live metadata capture into generator table entries, so adding a
+    # wrapped type is a re-capture rather than hand transcription. It includes
+    # the emitter directly so the type mapping cannot drift from the generator.
+    add_executable(urk-vrchat-table-gen src/tools/vrchat_table_gen.cpp)
+    target_compile_features(urk-vrchat-table-gen PRIVATE cxx_std_20)
+    target_include_directories(urk-vrchat-table-gen PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    if (MSVC)
+        target_compile_options(urk-vrchat-table-gen PRIVATE /W4 /permissive- /EHsc /utf-8)
+    endif()
+    urk_disable_vs_vcpkg_integration(urk-vrchat-table-gen)
+
 if (BUILD_TESTING)
     # The SDK templates are raw strings, so only a generated project type-checks
     # them. This generates one per backend and compiles a probe against it.
