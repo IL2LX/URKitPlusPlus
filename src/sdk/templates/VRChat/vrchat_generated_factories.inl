@@ -2,6 +2,10 @@
 
 namespace {
 
+std::string VRChatGeneratedVrcAnalyticsEventOptions() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcAnalyticsEventOptions, "sdk/VRChat/VRC/Core/AnalyticsEventOptions.h");
+}
+
 std::string VRChatGeneratedVrcAnalyticsInterface() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcAnalyticsInterface, "sdk/VRChat/VRC/Core/AnalyticsInterface.h");
 }
@@ -274,6 +278,10 @@ std::string VRChatGeneratedVrcApiNotification() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcApiNotification, "sdk/VRChat/VRC/Core/ApiNotification.h");
 }
 
+std::string VRChatGeneratedVrcApiOnlineMode() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcApiOnlineMode, "sdk/VRChat/VRC/Core/ApiOnlineMode.h");
+}
+
 std::string VRChatGeneratedVrcApiPagedTransactions() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcApiPagedTransactions, "sdk/VRChat/VRC/Core/ApiPagedTransactions.h");
 }
@@ -368,6 +376,10 @@ std::string VRChatGeneratedVrcApiSearchUserResults() {
 
 std::string VRChatGeneratedVrcApiSearchWorldResults() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcApiSearchWorldResults, "sdk/VRChat/VRC/Core/ApiSearchWorldResults.h");
+}
+
+std::string VRChatGeneratedVrcApiServerEnvironment() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcApiServerEnvironment, "sdk/VRChat/VRC/Core/ApiServerEnvironment.h");
 }
 
 std::string VRChatGeneratedVrcApiSharedConnectionCounts() {
@@ -534,8 +546,16 @@ std::string VRChatGeneratedVrcFavoriteModel() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcFavoriteModel, "sdk/VRChat/VRC/Core/FavoriteModel.h");
 }
 
+std::string VRChatGeneratedVrcFavoritePrivacy() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcFavoritePrivacy, "sdk/VRChat/VRC/Core/FavoritePrivacy.h");
+}
+
 std::string VRChatGeneratedVrcFavoritePrivacyExtensions() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcFavoritePrivacyExtensions, "sdk/VRChat/VRC/Core/FavoritePrivacyExtensions.h");
+}
+
+std::string VRChatGeneratedVrcFavoriteType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcFavoriteType, "sdk/VRChat/VRC/Core/FavoriteType.h");
 }
 
 std::string VRChatGeneratedVrcFavoriteTypeExtensions() {
@@ -554,6 +574,10 @@ std::string VRChatGeneratedVrcILoggerReceiver() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcILoggerReceiver, "sdk/VRChat/VRC/Core/ILoggerReceiver.h");
 }
 
+std::string VRChatGeneratedVrcInstanceAccessType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcInstanceAccessType, "sdk/VRChat/VRC/Core/InstanceAccessType.h");
+}
+
 std::string VRChatGeneratedVrcInstanceAccessTypeExtensions() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcInstanceAccessTypeExtensions, "sdk/VRChat/VRC/Core/InstanceAccessTypeExtensions.h");
 }
@@ -562,8 +586,20 @@ std::string VRChatGeneratedVrcIVRCLogger() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcIVRCLogger, "sdk/VRChat/VRC/Core/IVRCLogger.h");
 }
 
+std::string VRChatGeneratedVrcLicenseType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcLicenseType, "sdk/VRChat/VRC/Core/LicenseType.h");
+}
+
+std::string VRChatGeneratedVrcListingType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcListingType, "sdk/VRChat/VRC/Core/ListingType.h");
+}
+
 std::string VRChatGeneratedVrcLocalConfig() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcLocalConfig, "sdk/VRChat/VRC/Core/LocalConfig.h");
+}
+
+std::string VRChatGeneratedVrcLoggingMode() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcLoggingMode, "sdk/VRChat/VRC/Core/LoggingMode.h");
 }
 
 std::string VRChatGeneratedVrcAbstractObjectStateManager() {
@@ -658,6 +694,10 @@ std::string VRChatGeneratedVrcIPoseRecorder() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcIPoseRecorder, "sdk/VRChat/VRC/Core/Networking/Pose/IPoseRecorder.h");
 }
 
+std::string VRChatGeneratedVrcPoseContents() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcPoseContents, "sdk/VRChat/VRC/Core/Networking/Pose/PoseContents.h");
+}
+
 std::string VRChatGeneratedVrcPoseEvent() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcPoseEvent, "sdk/VRChat/VRC/Core/Networking/Pose/PoseEvent.h");
 }
@@ -710,8 +750,16 @@ std::string VRChatGeneratedVrcTweenFunctions() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcTweenFunctions, "sdk/VRChat/VRC/Core/Networking/Tween/TweenFunctions.h");
 }
 
+std::string VRChatGeneratedVrcVRCNetworkBehaviourTypeId() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCNetworkBehaviourTypeId, "sdk/VRChat/VRC/Core/Networking/VRCNetworkBehaviourTypeId.h");
+}
+
 std::string VRChatGeneratedVrcVRCPhotonEvent() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCPhotonEvent, "sdk/VRChat/VRC/Core/Networking/VRCPhotonEvent.h");
+}
+
+std::string VRChatGeneratedVrcNetworkRegion() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcNetworkRegion, "sdk/VRChat/VRC/Core/NetworkRegion.h");
 }
 
 std::string VRChatGeneratedVrcNetworkRegionExtensions() {
@@ -730,8 +778,16 @@ std::string VRChatGeneratedVrcPagedApiGroupResult() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcPagedApiGroupResult, "sdk/VRChat/VRC/Core/PagedApiGroupResult.h");
 }
 
+std::string VRChatGeneratedVrcProductType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcProductType, "sdk/VRChat/VRC/Core/ProductType.h");
+}
+
 std::string VRChatGeneratedVrcRemoteConfig() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcRemoteConfig, "sdk/VRChat/VRC/Core/RemoteConfig.h");
+}
+
+std::string VRChatGeneratedVrcAPIEventSource() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcAPIEventSource, "sdk/VRChat/VRC/Core/Services/APIEventSource.h");
 }
 
 std::string VRChatGeneratedVrcAPIEventSourceMethods() {
@@ -774,6 +830,10 @@ std::string VRChatGeneratedVrcNoAllocByteSetStorage() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcNoAllocByteSetStorage, "sdk/VRChat/VRC/Core/Source/Config/NoAllocByteSetStorage.h");
 }
 
+std::string VRChatGeneratedVrcTimeInterval() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcTimeInterval, "sdk/VRChat/VRC/Core/TimeInterval.h");
+}
+
 std::string VRChatGeneratedVrcIUdonAnalyticsEvent() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcIUdonAnalyticsEvent, "sdk/VRChat/VRC/Core/UdonAnalytics/IUdonAnalyticsEvent.h");
 }
@@ -800,6 +860,10 @@ std::string VRChatGeneratedVrcVRCEvent() {
 
 std::string VRChatGeneratedVrcVRChatTestProtocol() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRChatTestProtocol, "sdk/VRChat/VRC/Core/VRChatTestProtocol.h");
+}
+
+std::string VRChatGeneratedVrcVTP_PacketID() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVTP_PacketID, "sdk/VRChat/VRC/Core/VTP_PacketID.h");
 }
 
 std::string VRChatGeneratedVrcZLoggerHandlerLogger() {
@@ -876,6 +940,14 @@ std::string VRChatGeneratedVrcContactSenderProxy() {
 
 std::string VRChatGeneratedVrcDynamicsComponent() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcDynamicsComponent, "sdk/VRChat/VRC/Dynamics/DynamicsComponent.h");
+}
+
+std::string VRChatGeneratedVrcDynamicsUsage() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcDynamicsUsage, "sdk/VRChat/VRC/Dynamics/DynamicsUsage.h");
+}
+
+std::string VRChatGeneratedVrcDynamicsUsageFlags() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcDynamicsUsageFlags, "sdk/VRChat/VRC/Dynamics/DynamicsUsageFlags.h");
 }
 
 std::string VRChatGeneratedVrcDynamicsUsageFlagsExtensions() {
@@ -1046,12 +1118,32 @@ std::string VRChatGeneratedVrcVRCConstraintOffsetBaker() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCConstraintOffsetBaker, "sdk/VRChat/VRC/Dynamics/VRCConstraintOffsetBaker.h");
 }
 
+std::string VRChatGeneratedVrcVRCConstraintPlayerLoopStage() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCConstraintPlayerLoopStage, "sdk/VRChat/VRC/Dynamics/VRCConstraintPlayerLoopStage.h");
+}
+
+std::string VRChatGeneratedVrcVRCConstraintPositionMode() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCConstraintPositionMode, "sdk/VRChat/VRC/Dynamics/VRCConstraintPositionMode.h");
+}
+
+std::string VRChatGeneratedVrcVRCConstraintRotationMode() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCConstraintRotationMode, "sdk/VRChat/VRC/Dynamics/VRCConstraintRotationMode.h");
+}
+
+std::string VRChatGeneratedVrcVRCConstraintScaleMode() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCConstraintScaleMode, "sdk/VRChat/VRC/Dynamics/VRCConstraintScaleMode.h");
+}
+
 std::string VRChatGeneratedVrcVRCConstraintSource() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCConstraintSource, "sdk/VRChat/VRC/Dynamics/VRCConstraintSource.h");
 }
 
 std::string VRChatGeneratedVrcVRCConstraintSourceKeyableList() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCConstraintSourceKeyableList, "sdk/VRChat/VRC/Dynamics/VRCConstraintSourceKeyableList.h");
+}
+
+std::string VRChatGeneratedVrcVRCConstraintSynchronizeResult() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCConstraintSynchronizeResult, "sdk/VRChat/VRC/Dynamics/VRCConstraintSynchronizeResult.h");
 }
 
 std::string VRChatGeneratedVrcVRCDynamicsScheduler() {
@@ -1084,6 +1176,10 @@ std::string VRChatGeneratedVrcUdonProductsCategory() {
 
 std::string VRChatGeneratedVrcDroneSkinMapCore() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcDroneSkinMapCore, "sdk/VRChat/VRC/InventoryEffects/DroneSkinMapCore.h");
+}
+
+std::string VRChatGeneratedVrcInventoryContentType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcInventoryContentType, "sdk/VRChat/VRC/InventoryEffects/InventoryContentType.h");
 }
 
 std::string VRChatGeneratedVrcInventoryEffectAssetReference() {
@@ -1150,12 +1246,20 @@ std::string VRChatGeneratedVrcAbstractUdonBehaviour() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcAbstractUdonBehaviour, "sdk/VRChat/VRC/SDK3/Components/AbstractUdonBehaviour.h");
 }
 
+std::string VRChatGeneratedVrcMirrorClearFlags() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcMirrorClearFlags, "sdk/VRChat/VRC/SDK3/Components/MirrorClearFlags.h");
+}
+
 std::string VRChatGeneratedVrcMultipleDisplayUtilities() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcMultipleDisplayUtilities, "sdk/VRChat/VRC/SDK3/Components/MultipleDisplayUtilities.h");
 }
 
 std::string VRChatGeneratedVrcSetPropertyUtility() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcSetPropertyUtility, "sdk/VRChat/VRC/SDK3/Components/SetPropertyUtility.h");
+}
+
+std::string VRChatGeneratedVrcVideoError() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVideoError, "sdk/VRChat/VRC/SDK3/Components/Video/VideoError.h");
 }
 
 std::string VRChatGeneratedVrcVRCDepthkitMetadata() {
@@ -1242,6 +1346,10 @@ std::string VRChatGeneratedVrcDataDictionary() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcDataDictionary, "sdk/VRChat/VRC/SDK3/Data/DataDictionary.h");
 }
 
+std::string VRChatGeneratedVrcDataError() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcDataError, "sdk/VRChat/VRC/SDK3/Data/DataError.h");
+}
+
 std::string VRChatGeneratedVrcDataList() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcDataList, "sdk/VRChat/VRC/SDK3/Data/DataList.h");
 }
@@ -1254,8 +1362,24 @@ std::string VRChatGeneratedVrcJsonDictionary() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcJsonDictionary, "sdk/VRChat/VRC/SDK3/Data/JsonDictionary.h");
 }
 
+std::string VRChatGeneratedVrcJsonExportType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcJsonExportType, "sdk/VRChat/VRC/SDK3/Data/JsonExportType.h");
+}
+
 std::string VRChatGeneratedVrcJsonList() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcJsonList, "sdk/VRChat/VRC/SDK3/Data/JsonList.h");
+}
+
+std::string VRChatGeneratedVrcJsonType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcJsonType, "sdk/VRChat/VRC/SDK3/Data/JsonType.h");
+}
+
+std::string VRChatGeneratedVrcParseState() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcParseState, "sdk/VRChat/VRC/SDK3/Data/ParseState.h");
+}
+
+std::string VRChatGeneratedVrcTokenType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcTokenType, "sdk/VRChat/VRC/SDK3/Data/TokenType.h");
 }
 
 std::string VRChatGeneratedVrcVRCJson() {
@@ -1286,6 +1410,10 @@ std::string VRChatGeneratedVrcImageDownloader() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcImageDownloader, "sdk/VRChat/VRC/SDK3/Image/ImageDownloader.h");
 }
 
+std::string VRChatGeneratedVrcImageLoadError() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcImageLoadError, "sdk/VRChat/VRC/SDK3/Image/ImageLoadError.h");
+}
+
 std::string VRChatGeneratedVrcIVRCImageDownload() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcIVRCImageDownload, "sdk/VRChat/VRC/SDK3/Image/IVRCImageDownload.h");
 }
@@ -1298,12 +1426,24 @@ std::string VRChatGeneratedVrcVRCImageDownloader() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCImageDownloader, "sdk/VRChat/VRC/SDK3/Image/VRCImageDownloader.h");
 }
 
+std::string VRChatGeneratedVrcVRCImageDownloadError() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCImageDownloadError, "sdk/VRChat/VRC/SDK3/Image/VRCImageDownloadError.h");
+}
+
+std::string VRChatGeneratedVrcVRCImageDownloadState() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCImageDownloadState, "sdk/VRChat/VRC/SDK3/Image/VRCImageDownloadState.h");
+}
+
 std::string VRChatGeneratedVrcStats() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcStats, "sdk/VRChat/VRC/SDK3/Network/Stats.h");
 }
 
 std::string VRChatGeneratedVrcVRCNetworkBehaviour() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCNetworkBehaviour, "sdk/VRChat/VRC/SDK3/Network/VRCNetworkBehaviour.h");
+}
+
+std::string VRChatGeneratedVrcVRCUdonSyncType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCUdonSyncType, "sdk/VRChat/VRC/SDK3/Network/VRCUdonSyncType.h");
 }
 
 std::string VRChatGeneratedVrcVRCUdonSyncTypeConverter() {
@@ -1318,12 +1458,24 @@ std::string VRChatGeneratedVrcScreenUpdateData() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcScreenUpdateData, "sdk/VRChat/VRC/SDK3/Platform/ScreenUpdateData.h");
 }
 
+std::string VRChatGeneratedVrcScreenUpdateType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcScreenUpdateType, "sdk/VRChat/VRC/SDK3/Platform/ScreenUpdateType.h");
+}
+
 std::string VRChatGeneratedVrcCustomAttribute() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcCustomAttribute, "sdk/VRChat/VRC/SDK3/Props/Components/CustomAttribute.h");
 }
 
+std::string VRChatGeneratedVrcCustomAttributeType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcCustomAttributeType, "sdk/VRChat/VRC/SDK3/Props/Components/CustomAttributeType.h");
+}
+
 std::string VRChatGeneratedVrcVRCPropDescriptor() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCPropDescriptor, "sdk/VRChat/VRC/SDK3/Props/Components/VRCPropDescriptor.h");
+}
+
+std::string VRChatGeneratedVrcSpawnType() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcSpawnType, "sdk/VRChat/VRC/SDK3/Props/SpawnType.h");
 }
 
 std::string VRChatGeneratedVrcVRCPropApi() {
@@ -1334,8 +1486,16 @@ std::string VRChatGeneratedVrcVRCPropUtilities() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCPropUtilities, "sdk/VRChat/VRC/SDK3/Props/VRCPropUtilities.h");
 }
 
+std::string VRChatGeneratedVrcWorldSpawnPlacement() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcWorldSpawnPlacement, "sdk/VRChat/VRC/SDK3/Props/WorldSpawnPlacement.h");
+}
+
 std::string VRChatGeneratedVrcVRCAsyncGPUReadbackRequest() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCAsyncGPUReadbackRequest, "sdk/VRChat/VRC/SDK3/Rendering/VRCAsyncGPUReadbackRequest.h");
+}
+
+std::string VRChatGeneratedVrcVRCCameraMode() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCCameraMode, "sdk/VRChat/VRC/SDK3/Rendering/VRCCameraMode.h");
 }
 
 std::string VRChatGeneratedVrcVRCCameraSettings() {
@@ -1452,6 +1612,10 @@ std::string VRChatGeneratedVrcNetworkIDAssignment() {
 
 std::string VRChatGeneratedVrcNetworkIDPair() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcNetworkIDPair, "sdk/VRChat/VRC/SDKBase/Network/NetworkIDPair.h");
+}
+
+std::string VRChatGeneratedVrcVRCOrientation() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCOrientation, "sdk/VRChat/VRC/SDKBase/Platform/VRCOrientation.h");
 }
 
 std::string VRChatGeneratedVrcIVRCInteractable() {
@@ -1644,6 +1808,14 @@ std::string VRChatGeneratedVrcVRCDroneApi() {
 
 std::string VRChatGeneratedVrcVRCGraphics() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCGraphics, "sdk/VRChat/VRC/SDKBase/VRCGraphics.h");
+}
+
+std::string VRChatGeneratedVrcVRCInputMethod() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCInputMethod, "sdk/VRChat/VRC/SDKBase/VRCInputMethod.h");
+}
+
+std::string VRChatGeneratedVrcVRCInputSetting() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCInputSetting, "sdk/VRChat/VRC/SDKBase/VRCInputSetting.h");
 }
 
 std::string VRChatGeneratedVrcVRCRenderTexture() {

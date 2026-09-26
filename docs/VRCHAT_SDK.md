@@ -31,10 +31,11 @@ The eight hand-written templates are listed first. Everything after them is
 | `sdk/VRChat/VRC/Core/ConfigManager.h` | `VRC.Core.ConfigManager` |
 | `sdk/VRChat/VRC/Core/VRCLogger.h` | `VRC.Core.VRCLogger` |
 
-Plus **415 further VRChat SDK type wrappers** generated from a capture — the
+Plus **447 further VRChat SDK type wrappers** generated from a capture — the
 whole of `VRC.SDKBase`, `VRC.SDK3`, `VRC.Core`, `VRC.Dynamics`,
 `VRC.InventoryEffects`, `VRC.Utility`, `VRC.Economy` and `VRC.Localization`.
-See [Metadata-driven types](#metadata-driven-types).
+A generated project lands 478 of them. See
+[Metadata-driven types](#metadata-driven-types).
 
 These fall into three groups, each with a different authoring style:
 
@@ -425,17 +426,22 @@ project.
 
 ## Metadata-driven types
 
-426 headers are not hand-written. They are emitted at build time by
+458 headers are not hand-written. They are emitted at build time by
 `VrcGenerated::EmitType` (`vrchat_generated_emit.inl`) from a table of
 `TypeSpec` entries. Eleven of those entries are hand-maintained in
 `vrchat_generated_table.inl` and were captured from live IL2CPP metadata
-(VRChat 2022.3.22f2-DWR). The other 415 are generated into
+(VRChat 2022.3.22f2-DWR). The other 447 are generated into
 `vrchat_generated_types.inl` by `tools/regen_vrchat_table.ps1`.
 
-A generated project lands ~490 headers under `sdk/VRChat/`, 346 of them VRChat
-SDK type wrappers, covering `VRC.SDKBase`, `VRC.SDK3`, `VRC.Core`, `VRC.Dynamics`,
+A generated project lands 495 headers under `sdk/`, 478 of them VRChat SDK type
+wrappers, covering `VRC.SDKBase`, `VRC.SDK3`, `VRC.Core`, `VRC.Dynamics`,
 `VRC.InventoryEffects`, `VRC.Utility`, `VRC.Economy` and `VRC.Localization`.
 That includes the whole PhysBone, Contact and VRC-constraint families.
+
+A thin subclass such as `VRCPhysBone` declares no members of its own — its
+surface is on `VRCPhysBoneBase` — so its wrapper is an empty
+`Unity::Component` struct. It is still generated, because the type has to
+resolve: that is the name a mod puts in a scene.
 
 ### Hand-maintained entries
 
@@ -460,9 +466,11 @@ These are excluded from regeneration because they carry `alt_name` resilience
 
 The emitter picks a shape from the `TypeSpec` flags:
 
-- **enum** — emitted as `using VrcLayers = int;` plus one
-  `inline constexpr` per member. The literal values are **not** captured from
-  metadata, so each member is `constexpr <name>{}`, i.e. all zero. Treat enum
+- **enum** — emitted as `using VrcFavoriteType = int;` plus one
+  `inline constexpr` per member. Enum *membership* is data-driven, from
+  `vrchat_generated_enums.inl`, so a new enum is picked up without a hand edit.
+  The literal values are **not** present in either the decompile or the current
+  capture, so each member is `constexpr <name>{}`, i.e. all zero. Treat enum
   constants as opaque and prefer the hand-written enums
   (see [Mirrored enums](#mirrored-enums)) when a real value is needed.
 - **interface** — no callable surface is emitted at all.
@@ -499,8 +507,8 @@ files the generator reads:
 | Stage | File | Does |
 |---|---|---|
 | extract | `tools/extract_sdk_capture.ps1` | decompiled C# -> `tools/vrchat_slice.decompile.json` |
-| generate | `src/tools/vrchat_table_gen.cpp` | capture -> specs, factories, `writes` rows |
-| splice | `tools/regen_vrchat_table.ps1` | writes `vrchat_generated_types.inl`, `vrchat_generated_factories.inl`, and the `writes` block |
+| generate | `src/tools/vrchat_table_gen.cpp` | capture -> enum table, specs, factories, `writes` rows |
+| splice | `tools/regen_vrchat_table.ps1` | writes `vrchat_generated_enums.inl`, `vrchat_generated_types.inl`, `vrchat_generated_factories.inl`, and the `writes` block |
 
 The `writes` block is delimited by `// >>> VRCHAT_GENERATED_WRITES >>>`, so
 re-running replaces it wholesale.
@@ -520,7 +528,10 @@ listed so they cannot drift:
 
 Field-versus-property classification comes from the interop plumbing, not from
 casing: `NativeFieldInfoPtr_<name>` is a field, `NativeMethodInfoPtr_get_<name>`
-is a property. Casing gets VRChat's statics wrong.
+is a property. Casing gets VRChat's statics wrong. Whether a type is a component
+is decided by walking the parent chain, because `VRCPhysBone` derives from
+`VRCPhysBoneBase` which derives from `VRCNetworkBehaviour`; a single-level check
+hands the emitter a plain-class shape and the type silently arrives wrong.
 
 The `image` string is read from the decompiled `// Assembly:` line, because that
 is what the runtime resolves the type by. Guessing it from the folder is wrong:
@@ -528,11 +539,22 @@ is what the runtime resolves the type by. Guessing it from the folder is wrong:
 `VRC.Utility` and others. A type in an editor assembly is dropped, since the
 client never loads it.
 
-**Known fidelity limits.** The emitter's `ManagedToCpp` has no collection or
-array handling, so `List<T>`, `Dictionary<K,V>` and `T[]` members are emitted as
-`void*` and lose their element type. The tool reports every such type on stderr.
-Enum literals are still all zero. Both are reported rather than hidden, and
-neither affects whether a type resolves.
+**Known fidelity limits.** 175 managed types still fall back to `void*`:
+
+- 81 are collections and arrays (`List<T>`, `Dictionary<K,V>`, `T[]`). The
+  emitter's `ManagedToCpp` has no handling for them, so they lose their element
+  type. The value is still a usable handle, just untyped.
+- 94 are VRChat class types with no wrapper. `void*` is the right *shape* for
+  these, since the underlying value is an object handle, but it is untyped.
+
+Neither affects whether a type resolves. Every one is reported on stderr.
+
+Enum *membership* is data-driven — the 44 enums in the capture land in
+`vrchat_generated_enums.inl` and `IsManagedEnum` consults it — so a member of an
+enum type is emitted as an `int`. That one mattered: an enum field is a 4-byte
+integer, so before the table existed it was emitted as `void*` and read as a
+pointer. Enum *literal values* are still all zero, because neither the decompile
+nor the current capture carries them.
 
 The capture is derived from the decompile, not from live IL2CPP metadata. The
 image names it produces were cross-checked against the eleven live-captured

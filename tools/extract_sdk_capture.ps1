@@ -244,6 +244,14 @@ function Read-Type([string]$path, [string]$managed, [string]$imageFallback) {
     $isAbstract = $false
     $isStatic = $false
     $isIface = $false
+    $isEnum = $false
+
+    # An enum is a bare list of member names. Il2CppInterop drops the literal
+    # values, so the wrapper still cannot know them, but the type has to be
+    # recorded as an enum or a member of that type is emitted as void* and read
+    # as a pointer instead of an integer.
+    $enumLine = ($lines | Select-String -Pattern "public\s+enum\s+$([regex]::Escape($cls))\b" | Select-Object -First 1)
+    if ($enumLine) { $isEnum = $true }
 
     $ifaceLine = ($lines | Select-String -Pattern "public\s+.*interface\s+$([regex]::Escape($cls))\b" | Select-Object -First 1)
     if ($ifaceLine) {
@@ -267,8 +275,21 @@ function Read-Type([string]$path, [string]$managed, [string]$imageFallback) {
         if ($l -match 'NativeMethodInfoPtr_get_([A-Za-z0-9_]+?)_Public')          { $propNames[$Matches[1]]  = $true }
     }
 
-    $fields = @(); $props = @(); $methods = @()
+    $fields = @(); $props = @(); $methods = @(); $enumNames = @()
     $seenMethod = @{}
+
+    if ($isEnum) {
+        $inBody = $false
+        foreach ($raw in $lines) {
+            $line = $raw.Trim()
+            if (-not $inBody) {
+                if ($line -match "^public\s+enum\s+$([regex]::Escape($cls))\b") { $inBody = $true }
+                continue
+            }
+            if ($line -eq '}') { break }
+            if ($line -match '^([A-Za-z_][A-Za-z0-9_]*)\s*,?$') { $enumNames += $Matches[1] }
+        }
+    }
 
     foreach ($raw in $lines) {
         $line = $raw.Trim()
@@ -319,9 +340,11 @@ function Read-Type([string]$path, [string]$managed, [string]$imageFallback) {
         component     = $isComponent
         unity_object  = $true
         iface         = $isIface
+        enum          = $isEnum
         field         = @($fields)
         property      = @($props)
         methods       = @($methods)
+        enum_names    = @($enumNames)
     }
 }
 
@@ -379,7 +402,7 @@ foreach ($entry in ($all | Sort-Object Managed)) {
     # surface lives on the base, as VRCPhysBone is on VRCPhysBoneBase. The type
     # still has to resolve, because that is the name a mod puts in a scene, so it
     # is kept and the emitter emits it with empty member tables.
-    if ($count -eq 0 -and -not $data.component) { $why = 'no members'; Skip $entry.Managed; continue }
+    if ($count -eq 0 -and -not $data.component -and -not $data.enum) { $why = 'no members'; Skip $entry.Managed; continue }
 
     $outTypes[$entry.Managed] = $data
     $built++

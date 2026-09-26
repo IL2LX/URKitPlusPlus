@@ -211,10 +211,20 @@ std::string Escape(const std::string &in) {
 // dropped: exact ones are trustworthy, opaque ones are emitted and reported.
 enum class Fidelity { Exact, Opaque, Unsupported };
 
+// Enums seen in the capture. The emitter consults a generated table for these,
+// but the tool includes the emitter before that table exists, so it keeps its
+// own set. Without it a member of an enum type classifies as opaque and is
+// emitted as void*, which reads a pointer where the value is an integer.
+std::set<std::string> &CaptureEnums() {
+    static std::set<std::string> enums;
+    return enums;
+}
+
 Fidelity Classify(const std::string &managed) {
     if (managed.empty()) return Fidelity::Unsupported;
     if (managed == "System.Void") return Fidelity::Exact;
     if (VrcGenerated::IsManagedEnum(managed)) return Fidelity::Exact;
+    if (CaptureEnums().count(managed) != 0) return Fidelity::Exact;
     const std::string cpp = VrcGenerated::ManagedToCpp(managed);
     if (cpp == "void*") return Fidelity::Opaque;
     // ManagedToCpp resolves what it knows through its own tables, so anything
@@ -401,6 +411,15 @@ int main(int argc, char **argv) {
     std::vector<TypeEntry> entries;
     std::set<std::string> unsupported;
     std::set<std::string> opaque;
+    std::set<std::string> all_enums;
+
+    // First pass: every enum in the capture, so member classification below can
+    // treat an enum type as an integer rather than an opaque handle.
+    for (const auto &[managed, value] : types->members) {
+        if (value.kind != Json::Kind::Object) continue;
+        if (value.flag("enum") || VrcGenerated::IsManagedEnum(managed)) all_enums.insert(managed);
+    }
+    CaptureEnums() = all_enums;
 
     for (const auto &[managed, value] : types->members) {
         if (value.kind != Json::Kind::Object) continue;
@@ -432,7 +451,9 @@ int main(int argc, char **argv) {
         entry.image = value.str("image");
         entry.ns = value.str("ns");
         entry.cls = value.str("cls");
-        entry.is_enum = VrcGenerated::IsManagedEnum(managed);
+        entry.is_enum = value.flag("enum") || VrcGenerated::IsManagedEnum(managed);
+        for (const auto &n : value.list("enum_names"))
+            if (n.kind == Json::Kind::String) entry.enum_names.push_back(n.text);
         entry.is_interface = value.flag("iface");
         entry.is_static_class = value.flag("static");
         entry.is_value_type = !entry.is_static_class && !value.flag("component") &&
@@ -524,6 +545,15 @@ int main(int argc, char **argv) {
         }
     }
 
+    std::printf("//=== SECTION: enums ===\n");
+    std::printf("namespace VrcGenerated {\n\n");
+    std::printf("inline const char *const kVrcGeneratedEnumNames[] = {\n");
+    for (const auto &e : all_enums) std::printf("    \"%s\",\n", Escape(e).c_str());
+    std::printf("    nullptr,\n};\n\n");
+    std::printf("inline const char *const *VrcGeneratedEnumNames() {\n"
+                "    return kVrcGeneratedEnumNames;\n}\n\n");
+    std::printf("} // namespace VrcGenerated\n\n");
+
     std::printf("//=== SECTION: types ===\n");
     for (const auto &entry : entries) {
         if (!entry.fields.empty()) {
@@ -556,6 +586,14 @@ int main(int argc, char **argv) {
     }
 
     for (const auto &entry : entries) {
+        if (entry.enum_names.empty()) continue;
+        std::printf("inline const char *const k%sEnumNames[] = {\n", entry.cpp_name.c_str());
+        for (const auto &n : entry.enum_names)
+            std::printf("    \"%s\",\n", Escape(n).c_str());
+        std::printf("    nullptr,\n};\n\n");
+    }
+
+    for (const auto &entry : entries) {
         if (entry.methods.empty()) continue;
         std::printf("inline const VrcGenerated::MethodSpec k%sMethods[] = {\n",
                     entry.cpp_name.c_str());
@@ -584,7 +622,9 @@ int main(int argc, char **argv) {
                     entry.is_interface ? "true" : "false",
                     entry.is_static_class ? "true" : "false",
                     entry.is_value_type ? "true" : "false");
-        std::printf("    nullptr, 0,\n");
+        std::printf("    %s%s, %d,\n", entry.enum_names.empty() ? "nullptr" : "k",
+                    entry.enum_names.empty() ? "" : (entry.cpp_name + "EnumNames").c_str(),
+                    static_cast<int>(entry.enum_names.size()));
         // An empty array is a zero-size allocation, which /permissive- rejects,
         // and the table already has a nullptr/0 convention for "no members".
         const auto ref = [&](const char *kind, size_t count) {

@@ -176,6 +176,7 @@ set(URK_SDK_TEMPLATE_FILES
     ${URK_SRC_DIR}/sdk/templates/VRChat/VRC/SDK3/Components/VRCPickup.inl
     ${URK_SRC_DIR}/sdk/templates/VRChat/HighlightsFX.inl
     ${URK_SRC_DIR}/sdk/templates/VRChat/Menus.inl
+    ${URK_SRC_DIR}/sdk/templates/VRChat/vrchat_generated_enums.inl
     ${URK_SRC_DIR}/sdk/templates/VRChat/vrchat_generated_emit.inl
     ${URK_SRC_DIR}/sdk/templates/VRChat/vrchat_generated_table.inl
 )

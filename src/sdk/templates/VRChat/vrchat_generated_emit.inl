@@ -7,6 +7,15 @@
 
 namespace VrcGenerated {
 
+// Every managed enum in the capture, so IsManagedEnum does not need a hand edit
+// per release. Defined by vrchat_generated_enums.inl, which is included ahead of
+// this file and defines URK_VRCHAT_GENERATED_ENUMS. The guard matters because
+// vrchat_table_gen includes this emitter without the generated file, in order to
+// produce it.
+#if defined(URK_VRCHAT_GENERATED_ENUMS)
+inline const char *const *VrcGeneratedEnumNames();
+#endif
+
 struct MemberSpec {
     const char *name;
     const char *managed_type;
@@ -72,6 +81,15 @@ inline std::string ResolvedName(const char *name, const char *alt_name) {
 // surfaced as their underlying integer rather than guessed at. Every managed
 // enum is an int32 underneath, so this is a lossless widening.
 inline bool IsManagedEnum(const std::string &managed) {
+    // Generated from the capture, so a new enum does not need a hand edit here.
+    // Without it a member of an unknown enum type is emitted as void* and read
+    // as a pointer where the value is really an integer.
+#if defined(URK_VRCHAT_GENERATED_ENUMS)
+    for (const char *const *it = VrcGeneratedEnumNames(); it != nullptr && *it != nullptr; ++it) {
+        if (managed == *it)
+            return true;
+    }
+#endif
     static const char *kEnums[] = {
         "VRC.SDKBase.VRCLayers",
         "VRC.SDKBase.VRC_SceneDescriptor.SpawnOrder",
@@ -142,6 +160,10 @@ inline std::string ManagedToCpp(const std::string &managed) {
         { "UnityEngine.LayerMask", "Unity::LayerMask" },
         { "UnityEngine.Matrix4x4", "Unity::Matrix4x4" },
         { "UnityEngine.Plane", "Unity::Plane" },
+        { "UnityEngine.Mesh", "Unity::Object" },
+        { "UnityEngine.AudioClip", "Unity::Object" },
+        { "UnityEngine.MonoBehaviour", "Unity::Component" },
+        { "UnityEngine.ScriptableObject", "Unity::Object" },
     };
     for (const auto &entry : kUnityTypes) {
         if (managed == entry.first)
