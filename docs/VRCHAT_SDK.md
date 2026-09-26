@@ -31,10 +31,10 @@ The eight hand-written templates are listed first. Everything after them is
 | `sdk/VRChat/VRC/Core/ConfigManager.h` | `VRC.Core.ConfigManager` |
 | `sdk/VRChat/VRC/Core/VRCLogger.h` | `VRC.Core.VRCLogger` |
 
-Plus **447 further VRChat SDK type wrappers** generated from a capture — the
+Plus **458 further VRChat SDK type wrappers** generated from a capture — the
 whole of `VRC.SDKBase`, `VRC.SDK3`, `VRC.Core`, `VRC.Dynamics`,
 `VRC.InventoryEffects`, `VRC.Utility`, `VRC.Economy` and `VRC.Localization`.
-A generated project lands 478 of them. See
+A generated project lands 478 VRChat SDK headers in total. See
 [Metadata-driven types](#metadata-driven-types).
 
 These fall into three groups, each with a different authoring style:
@@ -426,17 +426,21 @@ project.
 
 ## Metadata-driven types
 
-458 headers are not hand-written. They are emitted at build time by
+469 headers are not hand-written. They are emitted at build time by
 `VrcGenerated::EmitType` (`vrchat_generated_emit.inl`) from a table of
 `TypeSpec` entries. Eleven of those entries are hand-maintained in
 `vrchat_generated_table.inl` and were captured from live IL2CPP metadata
-(VRChat 2022.3.22f2-DWR). The other 447 are generated into
+(VRChat 2022.3.22f2-DWR). The other 458 are generated into
 `vrchat_generated_types.inl` by `tools/regen_vrchat_table.ps1`.
 
 A generated project lands 495 headers under `sdk/`, 478 of them VRChat SDK type
-wrappers, covering `VRC.SDKBase`, `VRC.SDK3`, `VRC.Core`, `VRC.Dynamics`,
-`VRC.InventoryEffects`, `VRC.Utility`, `VRC.Economy` and `VRC.Localization`.
-That includes the whole PhysBone, Contact and VRC-constraint families.
+wrappers: 469 metadata-driven plus 9 hand-written templates that wrap no
+`TypeSpec` (`VRCPlayerAPI`, `Networking`, `APIUser`,
+`LocalizableStringExtensions`, `UdonBehaviour`, `VRC_Pickup`, `VRCPickup`,
+`HighlightsFX`, `Menus`). Coverage spans `VRC.SDKBase`, `VRC.SDK3`, `VRC.Core`,
+`VRC.Dynamics`, `VRC.InventoryEffects`, `VRC.Utility`, `VRC.Economy` and
+`VRC.Localization`, including the whole PhysBone, Contact and VRC-constraint
+families.
 
 A thin subclass such as `VRCPhysBone` declares no members of its own — its
 surface is on `VRCPhysBoneBase` — so its wrapper is an empty
@@ -525,6 +529,31 @@ listed so they cannot drift:
   (`VRCStation` exists in both `VRC.SDKBase` and `VRC.SDK3.Components`). The tool
   reports these on stderr and fails the build rather than emitting a
   redefinition.
+
+### What is excluded, and why
+
+The scan sees 1068 managed types and wraps 474. The 594 left out are not an
+oversight; the extractor prints the breakdown on every run.
+
+| Count | Reason |
+|---|---|
+| 423 | `VRC.Core.Networking.FlatBuffers` — VRChat's wire format, dwarfs everything else and is not mod API |
+| 39 | closed generics — no single runtime type to look up |
+| 38 | no members |
+| 27 | `VRC.SDKBase.Validation` — editor tooling |
+| 13 | no namespace — decompiler-generated anonymous types |
+| 11 | named individually, e.g. the SDK2 legacy `RPC` tree, rating breakdowns, tutorials |
+| 10 + 5 | MIDI import tooling |
+| 9 | `VRC.Core.data` — decompiler artifacts |
+| 8 | `VRC.Core.Pool` |
+| 13 | performance scanners, which wrap no runtime surface |
+| 2 | `VRC.SDK3.Internal.EventPortals` |
+| 3 | `VRCCamera*` (covered by the hand-written template) |
+| 1 | an editor assembly, which the client never loads |
+
+A 0-member type is kept if it is a component. `VRCPhysBone` declares nothing
+itself — its surface is on `VRCPhysBoneBase` — but the type still has to resolve,
+because that is the name a mod puts in a scene.
 
 Field-versus-property classification comes from the interop plumbing, not from
 casing: `NativeFieldInfoPtr_<name>` is a field, `NativeMethodInfoPtr_get_<name>`
