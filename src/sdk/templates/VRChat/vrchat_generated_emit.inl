@@ -10,6 +10,10 @@ namespace VrcGenerated {
 struct MemberSpec {
     const char *name;
     const char *managed_type;
+    // Name to try when `name` is absent, or null. VRChat renames internals
+    // between releases, and a single extra string in the table absorbs that
+    // without re-capturing every signature.
+    const char *alt_name;
 };
 
 struct MethodSpec {
@@ -18,6 +22,7 @@ struct MethodSpec {
     const char *const *params;
     int param_count;
     bool is_static;
+    const char *alt_name;
 };
 
 struct TypeSpec {
@@ -52,6 +57,15 @@ inline bool IsSkippableField(const std::string &name, const std::string &type) {
 inline bool IsPropertyAccessor(const std::string &name) {
     return name.rfind("get_", 0) == 0 || name.rfind("set_", 0) == 0 || name.rfind("add_", 0) == 0 ||
            name.rfind("remove_", 0) == 0;
+}
+
+// The name a lookup should actually use: the recorded name, or the fallback when
+// one is supplied. Emitted as a literal so a table edit is the only thing needed
+// to retarget a renamed member.
+inline std::string ResolvedName(const char *name, const char *alt_name) {
+    if (alt_name != nullptr && alt_name[0] != '\0')
+        return std::string(alt_name);
+    return std::string(name);
 }
 
 // Managed enum values are not present in the captured metadata, so enums are
@@ -234,11 +248,20 @@ inline std::string EmitType(const TypeSpec &spec, const std::string &rel_path) {
             if (IsSkippableField(field.name, field.managed_type))
                 continue;
             const std::string cpp = ManagedToCpp(field.managed_type);
+            const std::string member = ResolvedName(field.name, field.alt_name);
             out += "    " + cpp + " " + std::string(field.name) + "() const {\n";
-            out += "        return GetField<" + cpp + ">(\"" + std::string(field.name) + "\");\n";
+            out += "        return GetField<" + cpp + ">(\"" + member + "\");\n";
+            out += "    }\n";
+            // The Try form reports whether the member still exists upstream, so a
+            // VRChat rename is a checkable condition rather than a silent default.
+            out += "    bool try_" + std::string(field.name) + "(" + cpp + " &out) const {\n";
+            out += "        return TryGetField<" + cpp + ">(\"" + member + "\", out);\n";
             out += "    }\n";
             out += "    void set_" + std::string(field.name) + "(" + cpp + " value) const {\n";
-            out += "        SetField<" + cpp + ">(\"" + std::string(field.name) + "\", value);\n";
+            out += "        SetField<" + cpp + ">(\"" + member + "\", value);\n";
+            out += "    }\n";
+            out += "    bool try_set_" + std::string(field.name) + "(" + cpp + " value) const {\n";
+            out += "        return TrySetField<" + cpp + ">(\"" + member + "\", value);\n";
             out += "    }\n\n";
         }
 
@@ -247,8 +270,12 @@ inline std::string EmitType(const TypeSpec &spec, const std::string &rel_path) {
             if (IsSkippableField(prop.name, prop.managed_type))
                 continue;
             const std::string cpp = ManagedToCpp(prop.managed_type);
+            const std::string member = ResolvedName(prop.name, prop.alt_name);
             out += "    " + cpp + " " + std::string(prop.name) + "() const {\n";
-            out += "        return GetProperty<" + cpp + ">(\"" + std::string(prop.name) + "\");\n";
+            out += "        return GetProperty<" + cpp + ">(\"" + member + "\");\n";
+            out += "    }\n";
+            out += "    bool try_" + std::string(prop.name) + "(" + cpp + " &out) const {\n";
+            out += "        return TryGetProperty<" + cpp + ">(\"" + member + "\", out);\n";
             out += "    }\n\n";
         }
 
@@ -257,6 +284,7 @@ inline std::string EmitType(const TypeSpec &spec, const std::string &rel_path) {
             if (IsPropertyAccessor(method.name))
                 continue;
             const std::string ret = ManagedToCpp(method.return_type);
+            const std::string member = ResolvedName(method.name, method.alt_name);
             // A static method must not be dispatched through the instance: doing
             // so would pass `this` as the first argument and shift every
             // parameter by one.
@@ -269,13 +297,47 @@ inline std::string EmitType(const TypeSpec &spec, const std::string &rel_path) {
             out += ret + ">(";
             if (!instance_call)
                 out += "unity_type(), ";
-            out += "\"" + std::string(method.name) + "\", {";
+            out += "\"" + member + "\", {";
             for (int p = 0; p < method.param_count; ++p)
                 out += (p ? ", " : "") + std::string("\"") + method.params[p] + "\"";
             out += "}";
             for (int p = 0; p < method.param_count; ++p)
                 out += ", " + ParamName(p);
-            out += ");\n    }\n\n";
+            out += ");\n    }\n";
+
+            // The Try form surfaces whether the method still exists upstream,
+            // which is the difference between "returned a default" and "renamed".
+            // A void method has nothing to hand back, so it gets no out parameter:
+            // `void &out` does not compile.
+            const bool returns_void = ret == "void";
+            out += instance_call ? "    bool try_" : "    static bool try_";
+            out += std::string(method.name) + "(";
+            for (int p = 0; p < method.param_count; ++p)
+                out += (p ? ", " : "") + std::string(ManagedToCpp(method.params[p])) + " " + ParamName(p);
+            if (returns_void) {
+                out += instance_call ? ") const {\n" : ") {\n";
+            } else {
+                // The out parameter carries its own separator only when the method
+                // already has parameters, otherwise the signature opens with a comma.
+                if (method.param_count > 0) out += ",";
+                out += " " + ret + " &out";
+                out += instance_call ? ") const {\n" : ") {\n";
+            }
+            if (returns_void)
+                out += instance_call ? "        CallExact<void>(\"" + member + "\", {"
+                                    : "        URK::Unity::detail::InvokeStaticExact<void>(unity_type(), \"" +
+                                          member + "\", {";
+            else
+                out += instance_call
+                            ? "        out = CallExact<" + ret + ">(\"" + member + "\", {"
+                            : "        out = URK::Unity::detail::InvokeStaticExact<" + ret +
+                                  ">(unity_type(), \"" + member + "\", {";
+            for (int p = 0; p < method.param_count; ++p)
+                out += (p ? ", " : "") + std::string("\"") + method.params[p] + "\"";
+            out += "}";
+            for (int p = 0; p < method.param_count; ++p)
+                out += ", " + ParamName(p);
+            out += ");\n        return URK::Unity::detail::fallback_error() == nullptr;\n    }\n\n";
         }
         out += "};\n";
     }

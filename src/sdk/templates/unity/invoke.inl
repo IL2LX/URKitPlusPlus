@@ -770,8 +770,64 @@ template <class T> T Object::GetField(std::string_view fieldName) const {
     }
     return out.get();
 }
-template <class T> void Object::SetField(std::string_view fieldName, T value) const {
+template <class T> bool Object::TryGetField(std::string_view fieldName, T &out) const {
     detail::clear_error();
+    detail::FieldOut<std::remove_cvref_t<T>> raw{};
+    if (!handle_) {
+        detail::set_error("Unity Object::TryGetField failed: target object is null");
+        return false;
+    }
+    const void *k = detail::Backend::object_get_class(handle_);
+    if (!k) {
+        detail::set_error("Unity Object::TryGetField failed: object_get_class failed");
+        detail::append_backend_error();
+        return false;
+    }
+    const void *f = detail::Backend::find_field(k, fieldName);
+    if (!f) {
+        detail::set_error(std::string("Unity Object::TryGetField failed: field not found: ") +
+                          std::string(fieldName));
+        detail::append_backend_error();
+        return false;
+    }
+    if (!detail::Backend::field_get_value(handle_, f, raw.ptr())) {
+        detail::set_error(std::string("Unity Object::TryGetField failed: field read failed: ") +
+                          std::string(fieldName));
+        detail::append_backend_error();
+        return false;
+    }
+    out = raw.get();
+    return true;
+}
+template <class T> bool Object::TrySetField(std::string_view fieldName, T value) const {
+    detail::clear_error();
+    if (!handle_) {
+        detail::set_error("Unity Object::TrySetField failed: target object is null");
+        return false;
+    }
+    const void *k = detail::Backend::object_get_class(handle_);
+    if (!k) {
+        detail::set_error("Unity Object::TrySetField failed: object_get_class failed");
+        detail::append_backend_error();
+        return false;
+    }
+    const void *f = detail::Backend::find_field(k, fieldName);
+    if (!f) {
+        detail::set_error(std::string("Unity Object::TrySetField failed: field not found: ") +
+                          std::string(fieldName));
+        detail::append_backend_error();
+        return false;
+    }
+    detail::FieldArg<std::remove_cvref_t<T>> arg(value);
+    if (!detail::Backend::field_set_value(handle_, f, arg.ptr)) {
+        detail::set_error(std::string("Unity Object::TrySetField failed: field write failed: ") +
+                          std::string(fieldName));
+        detail::append_backend_error();
+        return false;
+    }
+    return true;
+}
+template <class T> void Object::SetField(std::string_view fieldName, T value) const {    detail::clear_error();
     if (!handle_) {
         detail::set_error("Unity Object::SetField failed: target object is null");
         return;

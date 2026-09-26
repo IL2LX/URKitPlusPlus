@@ -1,8 +1,9 @@
 # VRChat SDK wrappers
 
 The URKit++ project generator ships a set of VRChat-specific wrappers that are
-generated into every project targeting VRChat. They sit under
-`sdk/VRChat/VRC/` and mirror the managed VRChat SDK namespaces.
+generated into every project targeting VRChat. Most sit under `sdk/VRChat/VRC/`
+and mirror the managed VRChat SDK namespaces; two more sit directly under
+`sdk/VRChat/`.
 
 | Generated header | Managed type |
 |---|---|
@@ -13,21 +14,48 @@ generated into every project targeting VRChat. They sit under
 | `sdk/VRChat/VRC/Udon/UdonBehaviour.h` | `VRC.Udon.UdonBehaviour` |
 | `sdk/VRChat/VRC/SDKBase/VRC_Pickup.h` | `VRC.SDKBase.VRC_Pickup` |
 | `sdk/VRChat/VRC/SDK3/Components/VRCPickup.h` | `VRC.SDK3.Components.VRCPickup` |
+| `sdk/VRChat/HighlightsFX.h` | `HighlightsFX` |
+| `sdk/VRChat/Menus.h` | *(mod-side helper, no managed type)* |
+| `sdk/VRChat/VRC/SDKBase/VRC_SceneDescriptor.h` | `VRC.SDKBase.VRC_SceneDescriptor` |
+| `sdk/VRChat/VRC/SDKBase/VRC_Serialization.h` | `VRC.SDKBase.VRC_Serialization` |
+| `sdk/VRChat/VRC/SDKBase/VRC_AvatarPedestal.h` | `VRC.SDKBase.VRC_AvatarPedestal` |
+| `sdk/VRChat/VRC/SDKBase/VRC_SpatialAudioSource.h` | `VRC.SDKBase.VRC_SpatialAudioSource` |
+| `sdk/VRChat/VRC/SDKBase/VRC_StereoObject.h` | `VRC.SDKBase.VRC_StereoObject` |
+| `sdk/VRChat/VRC/SDKBase/VRCLayers.h` | `VRC.SDKBase.VRCLayers` (enum) |
+| `sdk/VRChat/VRC/Core/UnityVersion.h` | `VRC.Core.UnityVersion` |
+| `sdk/VRChat/VRC/Core/Endpoints.h` | `VRC.Core.Endpoints` |
+| `sdk/VRChat/VRC/Core/Logger.h` | `VRC.Core.Logger` |
+| `sdk/VRChat/VRC/Core/ConfigManager.h` | `VRC.Core.ConfigManager` |
+| `sdk/VRChat/VRC/Core/VRCLogger.h` | `VRC.Core.VRCLogger` |
+
+These fall into three groups, each with a different authoring style:
+
+- **Hand-written** — the seven `VRC/` wrappers plus `HighlightsFX`, authored
+  member by member. See the sections below.
+- **Metadata-driven** — the eleven `VrcGenerated` headers, emitted from a
+  captured metadata table. See
+  [Metadata-driven types](#metadata-driven-types).
+- **Mod-side helper** — `Menus.h`, which wraps no managed type at all.
 
 All of them are `OutputFilePolicy::GeneratedOverwrite`, so they are rewritten by
 the generator and **must not be edited by hand**. If you need a change,
 edit the `.inl` template under
-`src/sdk/templates/VRChat/VRC/` and regenerate, or copy the wrapper into a
+`src/sdk/templates/VRChat/` and regenerate, or copy the wrapper into a
 mod-owned header instead.
 
 The templates live in the repository at:
 
 ```text
 src/sdk/templates/VRChat/
+  HighlightsFX.inl
+  Menus.inl
+  vrchat_generated_emit.inl        # the emitter
+  vrchat_generated_table.inl       # the captured metadata table
   VRC/
     SDKBase/
       VRCPlayerAPI.inl
       Networking.inl
+      VRC_Pickup.inl
     Core/
       APIUser.inl
     Localization/
@@ -38,6 +66,10 @@ src/sdk/templates/VRChat/
       Components/
         VRCPickup.inl
 ```
+
+That is the complete set — eleven `.inl` files. The eight metadata-driven
+headers under `VRC/SDKBase/` and `VRC/Core/` have **no** `.inl` of their own;
+they are emitted at build time from `vrchat_generated_table.inl`.
 
 ## Quick example
 
@@ -327,6 +359,122 @@ are not wrapped. `VrcPickup::OnAwake` / `ForceDrop` / `OnDestroyed` /
 `HapticEvent` static delegates are also unwrapped: their managed parameter is a
 closed generic delegate, which exact overload lookup cannot spell.
 
+## HighlightsFX (`HighlightsFX`)
+
+A wrapper around the VRChat silhouette-highlight component (`HighlightsFX` in
+`Assembly-CSharp.dll`, namespace empty). This is **obfuscated** code, so unlike
+`VRC.Core.APIUser` its member names are not stable — the literals below are from
+one specific build and are resolved through the deobfuscation map.
+
+`HighlightsFX` has no public factory, so `Instance()` goes through the
+deobfuscated static `Method_HighlightsFX_0`:
+
+```cpp
+#include "sdk/VRChat/HighlightsFX.h"
+
+if (HighlightsFX fx = HighlightsFX::Instance()) {
+    fx.EnableOutline(renderer, true);
+    fx.EnableOutline(renderer, Unity::Color::red(), false);
+}
+```
+
+- `Instance()` — the deobfuscated static accessor
+- `EnableOutline(Unity::Renderer, bool)`
+- `EnableOutline(Unity::Renderer, Unity::Color, bool)` — sets an explicit color
+
+> The type carries a `bool` and a `Color` through the *same* deobfuscated name,
+> `Method_Void_Renderer_Boolean_0`, with the arity shifted by one. That is an
+> artefact of the obfuscator, not a typo, and it is why the two overloads above
+> differ only in argument count. Treat these names as build-specific.
+
+## Menus (`VRC::poll_menus`)
+
+`sdk/VRChat/Menus.h` wraps **no managed type**. It is a small mod-side helper
+that detects when the VRChat menu canvases come up and fires the mod's
+corresponding init hook:
+
+```cpp
+#include "sdk/VRChat/Menus.h"
+
+void on_frame() {
+    VRC::poll_menus();
+}
+```
+
+- Looks for `Canvas_QuickMenu(Clone)` and fires `Modules::System::QuickMenuInit()`
+  the first time it appears
+- Looks for `Canvas_MainMenu(Clone)` and fires `Modules::System::MainMenuInit()`
+  the first time it appears
+
+Each is guarded by a `static bool`, so it fires **once per process** even if
+`poll_menus()` is called every frame. There is deliberately no "already seen"
+reset: the canvases are recreated when the user reopens a menu, but the
+one-shot semantics are intentional.
+
+`Menus.h` includes `modules/modules.h` and depends on the mod's own
+`Modules::System` entry points, so it is only usable from a generated mod
+project.
+
+## Metadata-driven types
+
+Eleven headers are not hand-written. They are emitted at build time by
+`VrcGenerated::EmitType` (`vrchat_generated_emit.inl`) from a table of
+`TypeSpec` entries captured from live IL2CPP metadata
+(`vrchat_generated_table.inl`, VRChat 2022.3.22f2-DWR).
+
+| Header | C++ name | Kind | Image |
+|---|---|---|---|
+| `VRC/SDKBase/VRC_SceneDescriptor.h` | `VRC::SDKBase::VrcSceneDescriptor` | component | `VRCSDKBase.dll` |
+| `VRC/SDKBase/VRC_Serialization.h` | `VRC::SDKBase::VrcSerialization` | static class | `VRCSDKBase.dll` |
+| `VRC/SDKBase/VRC_AvatarPedestal.h` | `VRC::SDKBase::VrcAvatarPedestal` | component | `VRCSDKBase.dll` |
+| `VRC/SDKBase/VRC_SpatialAudioSource.h` | `VRC::SDKBase::VrcSpatialAudioSource` | component | `VRCSDKBase.dll` |
+| `VRC/SDKBase/VRC_StereoObject.h` | `VRC::SDKBase::VrcStereoObject` | component | `VRCSDKBase.dll` |
+| `VRC/SDKBase/VRCLayers.h` | `VRC::SDKBase::VrcLayers` | enum | `VRCSDKBase.dll` |
+| `VRC/Core/UnityVersion.h` | `VRC::Core::UnityVersion` | value type | `VRCCore-Standalone.dll` |
+| `VRC/Core/Endpoints.h` | `VRC::Core::Endpoints` | static class | `VRCCore-Standalone.dll` |
+| `VRC/Core/Logger.h` | `VRC::Core::Logger` | static class | `VRCCore-Standalone.dll` |
+| `VRC/Core/ConfigManager.h` | `VRC::Core::ConfigManager` | static class | `VRCCore-Standalone.dll` |
+| `VRC/Core/VRCLogger.h` | `VRC::Core::VRCLogger` | static class | `VRC.Logging.dll` |
+
+### Emission rules
+
+The emitter picks a shape from the `TypeSpec` flags:
+
+- **enum** — emitted as `using VrcLayers = int;` plus one
+  `inline constexpr` per member. The literal values are **not** captured from
+  metadata, so each member is `constexpr <name>{}`, i.e. all zero. Treat enum
+  constants as opaque and prefer the hand-written enums
+  (see [Mirrored enums](#mirrored-enums)) when a real value is needed.
+- **interface** — no callable surface is emitted at all.
+- **static class / value type** — a namespace of `InvokeStaticExact` free
+  functions. Every property captured on these is static, so it is reached
+  through its `get_` accessor rather than an instance read.
+- **component** — a `struct` deriving `Unity::Component`, with `GetField` /
+  `set_` / `GetProperty` / `CallExact` members generated per entry.
+
+### Two dispatch rules worth knowing
+
+Both exist to avoid silently binding to the wrong overload:
+
+- A parameter is only passed through *inferred* dispatch when it is a plain
+  primitive (`IsDispatchPrimitive`). Everything else goes through the explicit
+  managed-name path — otherwise a handle is inferred as `System.Object` and the
+  call binds to the wrong overload.
+- A `static` method is never dispatched through the instance. Doing so would
+  pass `this` as the first argument and shift every parameter by one, so the
+  emitter routes statics to `InvokeStaticExact`.
+
+### Adding a type
+
+Append a `TypeSpec` to `vrchat_generated_table.inl` plus a `VRChatGenerated*()`
+factory, and register the output in the `writes` list in
+`src/sdk/mod_project_generator_common.cpp`. No `.inl` per type is needed.
+
+Note the captured table is a snapshot of one build. `VRC_SceneDescriptor` and
+the `VRC.Core` logging/config types in particular are VRChat-internal and can
+shift between releases; re-capture from live metadata rather than hand-editing
+the table.
+
 ## Codegen conventions
 
 Generated VRChat headers follow a few rules:
@@ -337,10 +485,15 @@ Generated VRChat headers follow a few rules:
   leaves `last_error()` populated (`Unity::last_error()`).
 - Managed generic lists have no dedicated wrapper type; the live handle is held
   as a generic `Unity::Object` and walked with `Call`.
-- When adding a new VRChat template, register it in all three places:
-  `src/sdk/templates/mod_project_generator_vrchat.inl`, the `writes` list in
-  `src/sdk/mod_project_generator_common.cpp`, and the
+- When adding a new VRChat **`.inl` template**, register it in all three places:
+  `src/sdk/templates/mod_project_generator_vrchat.inl` (the `#include`),
+  the `writes` list in `src/sdk/mod_project_generator_common.cpp`, and the
   `URK_SDK_TEMPLATE_FILES` list in `cmake/URKitSources.cmake`.
+  The third is easy to forget and only shows up as an IDE/`HEADER_FILE_ONLY`
+  inconsistency — the build still succeeds, because the `.inl` is reached
+  transitively through `mod_project_generator_vrchat.inl`.
+- When adding a new **metadata-driven type**, no new `.inl` is needed. See
+  [Adding a type](#adding-a-type).
 
 ## Local reference corpus
 

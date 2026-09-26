@@ -1670,6 +1670,12 @@ struct Object {
     template <class Ret = void, class... Args> Ret Call(std::string_view methodName, Args &&...args) const;
     template <class T> T GetField(std::string_view fieldName) const;
     template <class T> void SetField(std::string_view fieldName, T value) const;
+    // Try forms report success directly. GetField degrades to a default value on
+    // a miss, which is safe but silent: the only way to tell a renamed field from
+    // a genuine zero is to inspect the shared error slot, and any other call can
+    // overwrite it first. These return the flag instead.
+    template <class T> bool TryGetField(std::string_view fieldName, T &out) const;
+    template <class T> bool TrySetField(std::string_view fieldName, T value) const;
     template <class T> static T StaticGetField(TypeRef type, std::string_view fieldName);
     template <class T> static void StaticSetField(TypeRef type, std::string_view fieldName, T value);
     template <class Ret = void>
@@ -1699,6 +1705,12 @@ struct Object {
     void SetReferenceArrayProperty(std::string_view propertyName, const std::vector<T> &values) const;
     template <class T> T GetProperty(std::string_view propertyName) const {
         return Call<T>(std::string("get_") + std::string(propertyName));
+    }
+    template <class T> bool TryGetProperty(std::string_view propertyName, T &out) const {
+        // Routed through the same generic call as GetProperty so the two cannot
+        // disagree about how a property is looked up.
+        out = Call<T>(std::string("get_") + std::string(propertyName));
+        return detail::fallback_error() == nullptr;
     }
     template <class T> void SetProperty(std::string_view propertyName, T value) const {
         Call<void>(std::string("set_") + std::string(propertyName), value);
