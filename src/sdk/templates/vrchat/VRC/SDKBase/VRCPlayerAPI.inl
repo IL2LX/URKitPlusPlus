@@ -50,7 +50,6 @@ struct VRCPlayerApi : Unity::Object {
 		return URK::Unity::detail::InvokeStatic<VRCPlayerApi>(unity_type(), "GetPlayerById", playerId);
 	}
 
-	// Managed return type: System.Collections.Generic.List<VRC.SDKBase.VRCPlayerApi>
 	static std::vector<VRCPlayerApi> GetAllPlayers() {
 		std::vector<VRCPlayerApi> players;
 		const Unity::Object list =
