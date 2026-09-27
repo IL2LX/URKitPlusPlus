@@ -1,6 +1,8 @@
 #include "sdk_generator_contract.h"
 
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <system_error>
 
 namespace SdkGenerator {
@@ -91,9 +93,30 @@ bool IsRegularNonEmpty(const fs::path &path) {
 }
 
 bool MaterializeFile(const OutputFile &file, const fs::path &destination, std::string *error) {
-    if (!file.sourcePath.empty())
-        return CopyFileToDestination(file.sourcePath, destination, error);
-    return ModProjectGenerator::WriteText(destination, file.contents, error);
+    if (!ModProjectGenerator::IsSdkOutputPath(file.relativePath)) {
+        if (!file.sourcePath.empty())
+            return CopyFileToDestination(file.sourcePath, destination, error);
+        return ModProjectGenerator::WriteText(destination, file.contents, error);
+    }
+
+    // The SDK is emitted without comments, so both routes have to go through the
+    // stripper: templates that carry their text inline and templates copied off
+    // disk are otherwise treated differently.
+    std::string text;
+    if (!file.sourcePath.empty()) {
+        std::ifstream in(file.sourcePath, std::ios::binary);
+        if (!in) {
+            if (error)
+                *error = "cannot read " + file.sourcePath.string();
+            return false;
+        }
+        std::ostringstream buffer;
+        buffer << in.rdbuf();
+        text = buffer.str();
+    } else {
+        text = file.contents;
+    }
+    return ModProjectGenerator::WriteText(destination, ModProjectGenerator::StripGeneratedComments(text), error);
 }
 
 bool WriteFileByPolicy(const OutputPlan &plan, const OutputFile &file, std::string *error) {

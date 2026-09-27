@@ -429,7 +429,8 @@ bool WriteIfMissing(const fs::path &path, const std::string &text, std::string *
     return WriteText(path, text, error);
 }
 
-bool WriteEditablePreserve(const ModuleProjectOptions &options, const PlannedWrite &write, std::string *error) {
+bool WriteEditablePreserve(const ModuleProjectOptions &options, const PlannedWrite &write,
+                           const std::string &content, std::string *error) {
     const fs::path destination = options.projectRoot / write.relativePath;
     std::error_code ec;
     const bool exists = fs::exists(destination, ec);
@@ -441,19 +442,21 @@ bool WriteEditablePreserve(const ModuleProjectOptions &options, const PlannedWri
     if (exists)
         return true;
 
-    return WriteText(destination, write.content, error);
+    return WriteText(destination, content, error);
 }
 
 bool WriteByPolicy(const ModuleProjectOptions &options, const PlannedWrite &write, std::string *error) {
     const fs::path destination = options.projectRoot / write.relativePath;
+    const std::string content =
+        IsSdkOutputPath(write.relativePath) ? StripGeneratedComments(write.content) : write.content;
     switch (write.policy) {
         case OutputFilePolicy::GeneratedOverwrite:
-            return WriteText(destination, write.content, error);
+            return WriteText(destination, content, error);
         case OutputFilePolicy::EditablePreserve:
-            return options.preserveEditableSources ? WriteEditablePreserve(options, write, error)
-                                                   : WriteText(destination, write.content, error);
+            return options.preserveEditableSources ? WriteEditablePreserve(options, write, content, error)
+                                                   : WriteText(destination, content, error);
         case OutputFilePolicy::DocumentationPreserve:
-            return WriteIfMissing(destination, write.content, error);
+            return WriteIfMissing(destination, content, error);
     }
     if (error)
         *error = "unknown output file policy for " + write.relativePath.generic_string();
@@ -631,6 +634,97 @@ void TryFormatCxxSource(const fs::path &destination, std::string &text) {
 }
 
 } // namespace
+
+std::string StripGeneratedComments(const std::string &in) {
+    std::string out;
+    out.reserve(in.size());
+
+    const std::size_t n = in.size();
+    std::size_t i = 0;
+    bool atLineStart = true;
+
+    const auto emit = [&](char c) {
+        if (atLineStart && (c == ' ' || c == '\t')) return;
+        out += c;
+        atLineStart = c == '\n';
+    };
+
+    while (i < n) {
+        const char c = in[i];
+
+        // A raw string literal can hold anything, including // and /*, so it has
+        // to be consumed whole rather than scanned.
+        if (c == 'R' && i + 1 < n && in[i + 1] == '"') {
+            const std::size_t open = in.find('(', i + 2);
+            if (open != std::string::npos) {
+                const std::string delimiter = in.substr(i + 2, open - (i + 2));
+                const std::string terminator = ")" + delimiter + "\"";
+                const std::size_t close = in.find(terminator, open);
+                const std::size_t end = close == std::string::npos ? n : close + terminator.size();
+                for (std::size_t k = i; k < end; ++k) emit(in[k]);
+                i = end;
+                continue;
+            }
+        }
+
+        if (c == '"' || c == '\'') {
+            const char quote = c;
+            emit(c);
+            ++i;
+            while (i < n) {
+                if (in[i] == '\\' && i + 1 < n) {
+                    emit(in[i]);
+                    emit(in[i + 1]);
+                    i += 2;
+                    continue;
+                }
+                emit(in[i]);
+                const bool closed = in[i] == quote;
+                ++i;
+                if (closed) break;
+            }
+            continue;
+        }
+
+        if (c == '/' && i + 1 < n && in[i + 1] == '/') {
+            while (i < n && in[i] != '\n') ++i;
+            continue;
+        }
+
+        if (c == '/' && i + 1 < n && in[i + 1] == '*') {
+            i += 2;
+            while (i + 1 < n && !(in[i] == '*' && in[i + 1] == '/')) {
+                if (in[i] == '\n') emit('\n');
+                ++i;
+            }
+            i = (i + 1 < n) ? i + 2 : n;
+            continue;
+        }
+
+        emit(c);
+        ++i;
+    }
+
+    // A stripped block leaves a run of blank lines. Collapse it so the result
+    // reads as deliberate rather than as something taken out.
+    std::string collapsed;
+    collapsed.reserve(out.size());
+    int blankRun = 0;
+    for (const char k : out) {
+        if (k == '\n') {
+            ++blankRun;
+            if (blankRun <= 1) collapsed += k;
+        } else {
+            blankRun = 0;
+            collapsed += k;
+        }
+    }
+    return collapsed;
+}
+
+bool IsSdkOutputPath(const fs::path &relativePath) {
+    return relativePath.generic_string().rfind("sdk/", 0) == 0;
+}
 
 std::string Identifier(const std::string &text, const char *fallback) {
     std::string out;

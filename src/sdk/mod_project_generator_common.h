@@ -23,6 +23,14 @@ struct OutputFileSpec {
 std::string Identifier(const std::string &text, const char *fallback);
 bool WriteText(const std::filesystem::path &path, const std::string &text, std::string *error);
 
+// The generated SDK is emitted without comments. Stripping happens in the
+// generators, on the way to disk, so the templates can keep the notes that
+// maintain them without each one having to leave them out.
+// Walks the text as a lexer would: a regex would corrupt a literal such as
+// "https://api.vrchat.cloud" or the character literal '/'.
+std::string StripGeneratedComments(const std::string &text);
+bool IsSdkOutputPath(const std::filesystem::path &relativePath);
+
 struct ModuleProjectOptions {
     std::filesystem::path projectRoot;
     std::filesystem::path sdkHeaderPath;
