@@ -35,8 +35,11 @@ struct VRCPlayerApi : Unity::Object {
 	}
 
 	// --- Methods
-	int GetPlayerCount() const {
-		return Call<int>("GetPlayerCount");
+	// GetPlayerCount is static in VRCSDK (NativeMethodInfoPtr_GetPlayerCount_Public_Static_Int32_0),
+	// so it has to be invoked statically. Calling it on an instance looks up a
+	// method that does not exist on that shape and fails.
+	static int GetPlayerCount() {
+		return URK::Unity::detail::InvokeStatic<int>(unity_type(), "GetPlayerCount");
 	}
 
 	static VRCPlayerApi GetPlayerByObject(Unity::GameObject obj) {
