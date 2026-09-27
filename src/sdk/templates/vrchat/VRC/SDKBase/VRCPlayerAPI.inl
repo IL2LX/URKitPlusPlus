@@ -4,6 +4,36 @@ std::string VRChatPlayerApiModule() {
 #include "sdk/unity/unity.h"
 
 namespace VRC::SDKBase {
+// Unity's HumanBodyBones. UnityEngine's own type, so it is not in VRChat's
+// metadata and its values could not be read back from the decompile; these follow
+// Unity's documented order. Anything that needs a bone must tolerate a wrong
+// value rather than trusting it.
+enum class HumanBodyBones : std::int32_t {
+    Hips = 0,
+    LeftUpperLeg = 1,
+    RightUpperLeg = 2,
+    LeftLowerLeg = 3,
+    RightLowerLeg = 4,
+    LeftFoot = 5,
+    RightFoot = 6,
+    Spine = 7,
+    Chest = 8,
+    Neck = 9,
+    Head = 10,
+    LeftShoulder = 11,
+    RightShoulder = 12,
+    LeftUpperArm = 13,
+    RightUpperArm = 14,
+    LeftLowerArm = 15,
+    RightLowerArm = 16,
+    LeftHand = 17,
+    RightHand = 18,
+    LeftToes = 19,
+    RightToes = 20,
+    UpperChest = 54,
+    LastBone = 55,
+};
+
 struct VRCPlayerApi : Unity::Object {
     using Unity::Object::Object;
     static constexpr Unity::TypeRef unity_type() {
@@ -166,6 +196,21 @@ struct VRCPlayerApi : Unity::Object {
 
 	void SetAvatarAudioFarRadius(float radius) const {
 		Call<void>("SetAvatarAudioFarRadius", radius);
+	}
+
+	// VRChat exposes both of these on VRCPlayerApi
+	// (GetBoneTransform_Public_Transform_HumanBodyBones_0 and
+	// GetBonePosition_Public_Vector3_HumanBodyBones_0). A Transform is the safer
+	// of the two to rely on, because its position is a plain field and can be
+	// checked against zero rather than trusted.
+	Unity::Transform GetBoneTransform(HumanBodyBones bone) const {
+		return CallExact<Unity::Transform>("GetBoneTransform", { "UnityEngine.HumanBodyBones" },
+		                                  static_cast<std::int32_t>(bone));
+	}
+
+	Unity::Vector3 GetBonePosition(HumanBodyBones bone) const {
+		return CallExact<Unity::Vector3>("GetBonePosition", { "UnityEngine.HumanBodyBones" },
+		                                 static_cast<std::int32_t>(bone));
 	}
 
 	void SetAvatarAudioNearRadius(float radius) const {
