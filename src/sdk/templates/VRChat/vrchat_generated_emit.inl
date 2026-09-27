@@ -196,10 +196,51 @@ inline std::string ParamName(std::size_t index) {
     return "arg" + std::to_string(index);
 }
 
+// Headers a type actually needs, decided by what its members reference rather
+// than by which namespace it lands in. Keying this off the namespace gave every
+// VRC::SDKBase type the VRCPlayerAPI include whether it used one or not, while
+// the types outside that namespace which did use VRCPlayerApi in a method
+// signature got nothing and only compiled through a transitive include.
+inline std::string RequiredIncludes(const TypeSpec &spec) {
+    bool needsPlayerApi = false;
+    bool needsApiUser = false;
+
+    const auto note = [&](const char *managed) {
+        if (managed == nullptr)
+            return;
+        const std::string type(managed);
+        if (type == "VRC.SDKBase.VRCPlayerApi")
+            needsPlayerApi = true;
+        else if (type == "VRC.Core.APIUser")
+            needsApiUser = true;
+    };
+
+    for (int i = 0; i < spec.field_count; ++i)
+        note(spec.fields[i].managed_type);
+    for (int i = 0; i < spec.property_count; ++i)
+        note(spec.properties[i].managed_type);
+    for (int i = 0; i < spec.method_count; ++i) {
+        const MethodSpec &method = spec.methods[i];
+        note(method.return_type);
+        for (int p = 0; p < method.param_count; ++p)
+            note(method.params[p]);
+    }
+
+    std::string includes;
+    if (needsPlayerApi)
+        includes += "#include \"sdk/VRChat/VRC/SDKBase/VRCPlayerAPI.h\"\n";
+    if (needsApiUser)
+        includes += "#include \"sdk/VRChat/VRC/Core/APIUser.h\"\n";
+    return includes;
+}
+
 inline std::string EmitType(const TypeSpec &spec, const std::string &rel_path) {
     std::string out;
     out += "#pragma once\n\n";
     out += "#include \"sdk/unity/unity.h\"\n";
+    out += RequiredIncludes(spec);
+    // Retained because a hand-written VRC::Core or VRC::SDKBase type may reach
+    // for these through a void* member, which carries no type name to inspect.
     if (spec.cpp_namespace == std::string("VRC::Core"))
         out += "#include \"sdk/VRChat/VRC/Core/APIUser.h\"\n";
     if (spec.cpp_namespace == std::string("VRC::SDKBase"))
