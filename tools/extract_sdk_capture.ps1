@@ -61,7 +61,8 @@ $skipExact = @(
     'VRC.SDKBase.MidiVoiceEventArgs','VRC.SDKBase.MidiVoiceMessageDelegate',
     'VRC.SDKBase.IVRCMidiInput','VRC.SDKBase.RPCIgnoredType','VRC.SDKBase.RPC',
     'VRC.SDK3.AbstractUdonBehaviour','VRC.SDK3.UdonSignatureHolderMarker',
-    'VRC.SDK3.IUdonSignatureHolder','VRC.SDK3.IUdonSignatureVerifier',
+    'VRC.Udon.Security.IUdonSignatureHolder','VRC.Udon.Security.IUdonSignatureVerifier',
+    'VRC.Udon.Security.UdonSignatureHolderMarker',
     'VRC.SDK3.Stats','VRC.SDK3.VRCDepthkitMetadata',
     'VRC.SDK3.ScreenUpdateData','VRC.SDK3.ScreenUpdateType',
     'VRC.SDK3.PhysBoneColliderMigration'
@@ -191,10 +192,29 @@ function Split-Params([string]$paramText, [string]$curNs) {
 $componentRoots = '^(MonoBehaviour|Component|Behaviour|VRCNetworkBehaviour|UdonBehaviour|NetworkBehaviour)$'
 $chainCache = @{}
 
+# Class name -> file, built once. The parent walk used to guess a namespace from a
+# fixed list of roots, which missed VRC.Dynamics.ManagedTypes and so reported
+# VRCParentConstraint as a plain class when it is a MonoBehaviour.
+$classIndex = @{}
+function Build-ClassIndex {
+    foreach ($root in $script:roots) {
+        $dir = Join-Path $Decompile "VRC\$root"
+        if (-not (Test-Path $dir)) { continue }
+        foreach ($f in Get-ChildItem -Recurse -File -Filter *.cs $dir) {
+            $head = Get-Content -LiteralPath $f.FullName -TotalCount 4
+            $marker = $head | Select-String -Pattern '^// Type:\s*(\S+)' | Select-Object -First 1
+            $name = if ($marker) { $marker.Matches[0].Groups[1].Value } else { $f.BaseName }
+            $leaf = $name.Substring($name.LastIndexOf('.') + 1)
+            if (-not $classIndex.ContainsKey($leaf)) { $classIndex[$leaf] = $f.FullName }
+        }
+    }
+}
+
 function Get-ParentOf([string]$managed) {
     if ($chainCache.ContainsKey($managed)) { return $chainCache[$managed] }
-    $path = Join-Path $Decompile (($managed -replace '\.','\') + '.cs')
-    if (-not (Test-Path $path)) { $chainCache[$managed] = ''; return '' }
+    $leaf = $managed.Substring($managed.LastIndexOf('.') + 1)
+    $path = $classIndex[$leaf]
+    if (-not $path) { $chainCache[$managed] = ''; return '' }
     $m = (Get-Content -LiteralPath $path |
           Select-String -Pattern "public\s+(?:abstract\s+|sealed\s+)?(?:class|struct)\s+[A-Za-z0-9_]+\b.*?:\s*([A-Za-z0-9_.]+)" |
           Select-Object -First 1)
@@ -210,20 +230,25 @@ function Test-IsComponentChain([string]$parent) {
         if ($cur -match $componentRoots) { return $true }
         if ($seen.ContainsKey($cur)) { return $false }
         $seen[$cur] = $true
-        # The parent is recorded unqualified in these sources, so it is resolved
-        # against the roots the type could plausibly live in.
-        $qualified = $null
-        foreach ($root in @('VRC.Dynamics','VRC.SDK3','VRC.SDKBase','VRC.Core','VRC.Udon')) {
-            $candidate = "$root.$cur"
-            if (Test-Path (Join-Path $Decompile (($candidate -replace '\.','\') + '.cs'))) { $qualified = $candidate; break }
-        }
-        $cur = if ($qualified) { Get-ParentOf $qualified } else { '' }
+        # The parent is recorded unqualified, so it is resolved through the class
+        # index rather than by guessing a namespace.
+        $next = $cur
+        if (-not $classIndex.ContainsKey($cur)) { return $false }
+        $next = Get-ParentOf $cur
+        $cur = $next
     }
     return $false
 }
 
 function Read-Type([string]$path, [string]$managed, [string]$imageFallback) {
     $lines = Get-Content -LiteralPath $path
+
+    # The decompile records the real managed name, and it is not always the file
+    # path: VRCParentConstraint lives in VRC\SDK3\Dynamics\Constraint\ but is
+    # VRC.SDK3.Dynamics.Constraint.Components.VRCParentConstraint. Trusting the
+    # folder produced a name the runtime can never resolve.
+    $typeMarker = ($lines | Select-String -Pattern '^// Type:\s*(\S+)' | Select-Object -First 1)
+    if ($typeMarker) { $managed = $typeMarker.Matches[0].Groups[1].Value -replace '\+', '.' }
 
     # The IL2CPP image name has to match the assembly a type actually lives in,
     # because that is what the runtime resolves the type by. Guessing it from the
@@ -336,6 +361,7 @@ function Read-Type([string]$path, [string]$managed, [string]$imageFallback) {
     $isComponent = Test-IsComponentChain $parent
 
     return [ordered]@{
+        managed       = $managed
         image         = $image
         editor_only   = $editorOnly
         ns            = $ns
@@ -360,11 +386,11 @@ function Read-Type([string]$path, [string]$managed, [string]$imageFallback) {
 # PhysBone family behind the thin VRCPhysBone/VRCPhysBoneCollider subclasses, so
 # leaving it out silently drops those. Obfuscated is decompiler-generated noise
 # and SDK/SDKInterface/Networking hold no types of their own.
-$roots = @('SDKBase','SDK3','Core','Dynamics','InventoryEffects','Utility',
-           'Economy','Localization','CameraSystems')
+$script:roots = @('SDKBase','SDK3','Core','Dynamics','InventoryEffects','Utility','Economy','Localization','CameraSystems')
 
 $all = @()
-foreach ($root in $roots) {
+Build-ClassIndex
+foreach ($root in $script:roots) {
     $dir = Join-Path $Decompile "VRC\$root"
     if (-not (Test-Path $dir)) { continue }
     Get-ChildItem -Recurse -File -Filter *.cs $dir | ForEach-Object {
@@ -401,6 +427,15 @@ foreach ($entry in ($all | Sort-Object Managed)) {
 
     $image = if ($entry.Managed -like 'VRC.SDK3.*') { 'VRCSDK3.dll' } else { 'VRCSDKBase.dll' }
     $data = Read-Type $entry.Path $entry.Managed $image
+    # The real managed name can differ from the folder, so the rules above are
+    # applied a second time against it. VRC.Udon.Security.IUdonSignatureHolder is
+    # only excluded by name, and the folder calls it VRC.SDK3.Udon.Security.
+    if ($data.managed -ne $entry.Managed) {
+        if ($data.managed -match '`\d+$') { $why = 'generic'; Skip $data.managed; continue }
+        if ($skipSet.ContainsKey($data.managed)) { $why = 'exact'; Skip $data.managed; continue }
+        $hit2 = $skipPrefix | Where-Object { $data.managed.StartsWith($_) }
+        if ($hit2) { $why = "subtree $(@($hit2)[0])"; Skip $data.managed; continue }
+    }
     if ($data.editor_only) { $why = 'editor assembly'; Skip $entry.Managed; continue }
     if (-not $data.ns) { $why = 'no namespace'; Skip $entry.Managed; continue }
     $count = $data.field.Count + $data.property.Count + $data.methods.Count
@@ -410,7 +445,7 @@ foreach ($entry in ($all | Sort-Object Managed)) {
     # is kept and the emitter emits it with empty member tables.
     if ($count -eq 0 -and -not $data.component -and -not $data.enum) { $why = 'no members'; Skip $entry.Managed; continue }
 
-    $outTypes[$entry.Managed] = $data
+    $outTypes[$data.managed] = $data
     $built++
 }
 

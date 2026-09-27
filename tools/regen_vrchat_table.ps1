@@ -98,6 +98,19 @@ foreach ($name in @('enums','types','factories','writes')) {
 $count = ([regex]::Matches($sections['types'], '(?m)^inline const VrcGenerated::TypeSpec ')).Count
 Write-Output "generated $count types"
 
+# The capture is only trustworthy if every name in it traces back to a real type.
+# This runs before anything is written, so a bad capture leaves the committed
+# table alone rather than replacing it with one that cannot resolve.
+$checkScript = Join-Path $PSScriptRoot 'check_generated_names.ps1'
+if (Test-Path $checkScript) {
+    $ErrorActionPreference = 'Continue'
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $checkScript 2>&1 |
+        Where-Object { $_ -match '^(name check|  fields|RESULT)' } | ForEach-Object { "  $_" }
+    $checkExit = $LASTEXITCODE
+    $ErrorActionPreference = 'Stop'
+    if ($checkExit -ne 0) { throw "name check failed (exit $checkExit); nothing was written" }
+}
+
 # --- 1. the enum name table, included ahead of the emitter --------------------
 
 $enumBanner = @(

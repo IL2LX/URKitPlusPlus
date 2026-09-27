@@ -1386,6 +1386,30 @@ std::string VRChatGeneratedVrcVRCJson() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCJson, "sdk/VRChat/VRC/SDK3/Data/VRCJson.h");
 }
 
+std::string VRChatGeneratedVrcVRCAimConstraint() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCAimConstraint, "sdk/VRChat/VRC/SDK3/Dynamics/Constraint/Components/VRCAimConstraint.h");
+}
+
+std::string VRChatGeneratedVrcVRCLookAtConstraint() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCLookAtConstraint, "sdk/VRChat/VRC/SDK3/Dynamics/Constraint/Components/VRCLookAtConstraint.h");
+}
+
+std::string VRChatGeneratedVrcVRCParentConstraint() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCParentConstraint, "sdk/VRChat/VRC/SDK3/Dynamics/Constraint/Components/VRCParentConstraint.h");
+}
+
+std::string VRChatGeneratedVrcVRCPositionConstraint() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCPositionConstraint, "sdk/VRChat/VRC/SDK3/Dynamics/Constraint/Components/VRCPositionConstraint.h");
+}
+
+std::string VRChatGeneratedVrcVRCRotationConstraint() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCRotationConstraint, "sdk/VRChat/VRC/SDK3/Dynamics/Constraint/Components/VRCRotationConstraint.h");
+}
+
+std::string VRChatGeneratedVrcVRCScaleConstraint() {
+    return VrcGenerated::EmitType(VrcGenerated::kVrcVRCScaleConstraint, "sdk/VRChat/VRC/SDK3/Dynamics/Constraint/Components/VRCScaleConstraint.h");
+}
+
 std::string VRChatGeneratedVrcVRCContactReceiver() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCContactReceiver, "sdk/VRChat/VRC/SDK3/Dynamics/Contact/Components/VRCContactReceiver.h");
 }
@@ -1520,14 +1544,6 @@ std::string VRChatGeneratedVrcVRCStringDownload() {
 
 std::string VRChatGeneratedVrcVRCStringDownloader() {
     return VrcGenerated::EmitType(VrcGenerated::kVrcVRCStringDownloader, "sdk/VRChat/VRC/SDK3/StringLoading/VRCStringDownloader.h");
-}
-
-std::string VRChatGeneratedVrcIUdonSignatureHolder() {
-    return VrcGenerated::EmitType(VrcGenerated::kVrcIUdonSignatureHolder, "sdk/VRChat/VRC/Udon/Security/IUdonSignatureHolder.h");
-}
-
-std::string VRChatGeneratedVrcIUdonSignatureVerifier() {
-    return VrcGenerated::EmitType(VrcGenerated::kVrcIUdonSignatureVerifier, "sdk/VRChat/VRC/Udon/Security/IUdonSignatureVerifier.h");
 }
 
 std::string VRChatGeneratedVrcNetworkCallableAttribute() {
