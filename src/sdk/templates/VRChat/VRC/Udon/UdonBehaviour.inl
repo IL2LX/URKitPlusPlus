@@ -2,6 +2,7 @@ std::string VRChatUdonBehaviourModule() {
     return R"URKUDONBEHAVIOUR(#pragma once
 
 #include "sdk/unity/unity.h"
+#include "sdk/unity/unity_inspect.h"
 
 #include <cstdint>
 #include <string>
@@ -238,10 +239,16 @@ namespace VRC::Udon
         // runtime's array_ref_at export, and without it the whole listing came
         // back empty even though the behaviour plainly had variables. The public
         // path only needs object_get_class, which is always present.
+        // value is the boxed System.Object the variable holds, which on its own
+        // is opaque: a System.Single arrives as a boxed float with nothing to
+        // read off it. value_info is that value resolved against the variable's
+        // declared type, so a string arrives as its text, an array as its
+        // length, and a numeric or bool as the number itself.
         struct ProgramVariable {
             std::string name;
             std::string type_name;
             Unity::Object value;
+            URK::Unity::Inspect::ValueInfo value_info;
         };
 
         std::vector<ProgramVariable> ListProgramVariables() const {
@@ -292,6 +299,22 @@ namespace VRC::Udon
                 if (table.CallExact<bool>("TryGetVariableValue", { "System.String", "System.Object&" },
                                          name, &valueHandle)) {
                     entry.value = Unity::Object{ valueHandle };
+                }
+
+                // Resolve the boxed object against the declared type. This is the
+                // same path a method return value takes, so a numeric or bool
+                // variable comes back unboxed and a string comes back as its
+                // text instead of a bare pointer.
+                if (valueHandle && typeHandle) {
+                    entry.value_info =
+                        URK::Unity::Inspect::invoke_result_value(entry.type_name, typeHandle, valueHandle,
+                                                                 "UdonBehaviour::ListProgramVariables");
+                } else {
+                    URK::Unity::Inspect::ValueInfo none{};
+                    none.type_name = entry.type_name;
+                    none.kind = URK::Unity::Inspect::ValueKind::Null;
+                    none.display = valueHandle ? std::string("<type unavailable>") : std::string("null");
+                    entry.value_info = none;
                 }
 
                 out.push_back(std::move(entry));
