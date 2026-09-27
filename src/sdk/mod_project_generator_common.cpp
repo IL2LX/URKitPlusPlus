@@ -641,13 +641,26 @@ std::string StripGeneratedComments(const std::string &in) {
 
     const std::size_t n = in.size();
     std::size_t i = 0;
+    // Indentation is held back until the line is known to contain code. Dropping
+    // it eagerly, which this did at first, stripped the indentation off every
+    // line in the SDK rather than just off the ones that were only comments.
     bool atLineStart = true;
+    std::string pendingIndent;
 
     const auto emit = [&](char c) {
-        if (atLineStart && (c == ' ' || c == '\t')) return;
+        if (atLineStart && (c == ' ' || c == '\t')) {
+            pendingIndent += c;
+            return;
+        }
+        if (atLineStart) {
+            out += pendingIndent;
+            pendingIndent.clear();
+        }
         out += c;
         atLineStart = c == '\n';
+        if (atLineStart) pendingIndent.clear();
     };
+    const auto dropLine = [&]() { pendingIndent.clear(); };
 
     while (i < n) {
         const char c = in[i];
@@ -687,11 +700,13 @@ std::string StripGeneratedComments(const std::string &in) {
         }
 
         if (c == '/' && i + 1 < n && in[i + 1] == '/') {
+            dropLine();
             while (i < n && in[i] != '\n') ++i;
             continue;
         }
 
         if (c == '/' && i + 1 < n && in[i + 1] == '*') {
+            dropLine();
             i += 2;
             while (i + 1 < n && !(in[i] == '*' && in[i + 1] == '/')) {
                 if (in[i] == '\n') emit('\n');
@@ -704,6 +719,7 @@ std::string StripGeneratedComments(const std::string &in) {
         emit(c);
         ++i;
     }
+    dropLine();
 
     // A stripped block leaves a run of blank lines. Collapse it so the result
     // reads as deliberate rather than as something taken out.

@@ -4,7 +4,10 @@ std::string VRChatUdonBehaviourModule() {
 #include "sdk/unity/unity.h"
 
 #include <cstdint>
+#include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace VRC::Udon
 {
@@ -225,6 +228,82 @@ namespace VRC::Udon
             }
             return Unity::Object{ value };
         }
+
+        // There is no managed API that lists a behaviour's variables:
+        // GetProgramVariable needs a name the caller already has, and
+        // UdonBehaviour exposes no GetPublicVariableNames. The names are the keys
+        // of the dictionary behind publicVariables, so they are read directly:
+        //
+        //   publicVariables  IUdonVariableTable
+        //     _publicVariables  Dictionary<string, IUdonVariable>
+        //       _entries  Dictionary.Entry<string, IUdonVariable>[]
+        //         key / value
+        //           <Value>k__BackingField
+        //
+        // _keys would need the collection enumerator called, which is more
+        // fragile than reading the entry array, and _count alone is not enough
+        // because deleted slots are skipped.
+        struct ProgramVariable {
+            std::string name;
+            std::string type_name;
+            Unity::Object value;
+        };
+
+        std::vector<ProgramVariable> ListProgramVariables() const {
+            std::vector<ProgramVariable> out;
+
+            const Unity::Object table = GetField<Unity::Object>("publicVariables");
+            if (!table) {
+                URK::Unity::detail::set_error("UdonBehaviour has no publicVariables table");
+                return out;
+            }
+
+            const Unity::Object map = table.GetField<Unity::Object>("_publicVariables");
+            if (!map) {
+                URK::Unity::detail::set_error("UdonBehaviour publicVariables has no _publicVariables dictionary");
+                return out;
+            }
+
+            void* entries = map.GetField<void*>("_entries");
+            if (!entries) {
+                URK::Unity::detail::set_error("UdonBehaviour variable dictionary has no _entries array");
+                return out;
+            }
+
+            const auto array = URK::Unity::detail::RootedObjectArray<Unity::Object>::from_managed_array(
+                entries, "UdonBehaviour::ListProgramVariables");
+            if (!array) return out;
+
+            for (const Unity::Object &slot : array) {
+                if (!slot) continue; // a removed entry leaves a null slot behind
+
+                const Unity::Object variable = slot.GetField<Unity::Object>("value");
+                if (!variable) continue;
+
+                ProgramVariable entry;
+                // The dictionary key is authoritative: SymbolName is the same
+                // string but reading a property can invoke user code.
+                entry.name = slot.GetField<std::string>("key");
+                if (entry.name.empty())
+                    entry.name = variable.GetProperty<std::string>("SymbolName");
+                if (entry.name.empty()) continue;
+
+                const Unity::Object declared = variable.GetProperty<Unity::Object>("DeclaredType");
+                if (declared) entry.type_name = declared.GetProperty<std::string>("FullName");
+
+                entry.value = variable.GetProperty<Unity::Object>("Value");
+                out.push_back(std::move(entry));
+            }
+            return out;
+        }
+
+        std::vector<std::string> ListProgramVariableNames() const {
+            std::vector<std::string> names;
+            for (const ProgramVariable &variable : ListProgramVariables())
+                names.push_back(variable.name);
+            return names;
+        }
+
 
         void SetProgramVariable(std::string_view symbolName, void* value) const {
             CallExact<void>("SetProgramVariable", { "System.String", "System.Object" }, symbolName, value);

@@ -556,6 +556,13 @@ void probe_vrc_generated() {
     udon.SetProgramVariable("propId", nullptr);
     (void)udon.HasError();
     (void)udon.ProgramId();
+    for (const auto &variable : udon.ListProgramVariables()) {
+        (void)variable.name;
+        (void)variable.type_name;
+        (void)variable.value;
+    }
+    std::size_t named = udon.ListProgramVariableNames().size();
+    (void)named;
 
     // A prop instance is a UdonSharp script, so the descriptor that points at it
     // and the program variables that hold its state are both on this path. The
