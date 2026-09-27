@@ -229,20 +229,15 @@ namespace VRC::Udon
             return Unity::Object{ value };
         }
 
-        // There is no managed API that lists a behaviour's variables:
-        // GetProgramVariable needs a name the caller already has, and
-        // UdonBehaviour exposes no GetPublicVariableNames. The names are the keys
-        // of the dictionary behind publicVariables, so they are read directly:
+        // UdonBehaviour exposes no GetPublicVariableNames, so the names come from
+        // the variable table's own VariableSymbols collection and each entry is
+        // read back through the table's accessors.
         //
-        //   publicVariables  IUdonVariableTable
-        //     _publicVariables  Dictionary<string, IUdonVariable>
-        //       _entries  Dictionary.Entry<string, IUdonVariable>[]
-        //         key / value
-        //           <Value>k__BackingField
-        //
-        // _keys would need the collection enumerator called, which is more
-        // fragile than reading the entry array, and _count alone is not enough
-        // because deleted slots are skipped.
+        // The names are deliberately NOT taken from the dictionary internals
+        // behind IUdonVariableTable. Walking _publicVariables._entries needs the
+        // runtime's array_ref_at export, and without it the whole listing came
+        // back empty even though the behaviour plainly had variables. The public
+        // path only needs object_get_class, which is always present.
         struct ProgramVariable {
             std::string name;
             std::string type_name;
@@ -258,40 +253,47 @@ namespace VRC::Udon
                 return out;
             }
 
-            const Unity::Object map = table.GetField<Unity::Object>("_publicVariables");
-            if (!map) {
-                URK::Unity::detail::set_error("UdonBehaviour publicVariables has no _publicVariables dictionary");
+            const Unity::Object symbols = table.GetProperty<Unity::Object>("VariableSymbols");
+            if (!symbols) {
+                URK::Unity::detail::set_error("UdonBehaviour variable table has no VariableSymbols collection");
                 return out;
             }
 
-            void* entries = map.GetField<void*>("_entries");
-            if (!entries) {
-                URK::Unity::detail::set_error("UdonBehaviour variable dictionary has no _entries array");
+            // VariableSymbols is an IReadOnlyCollection<string>. There is no
+            // managed indexer reachable without the generic interface, so it is
+            // walked as an enumerator, which needs no type arguments.
+            Unity::Object enumerator = symbols.Call<Unity::Object>("GetEnumerator");
+            if (!enumerator) {
+                URK::Unity::detail::set_error("UdonBehaviour VariableSymbols has no enumerator");
                 return out;
             }
 
-            const auto array = URK::Unity::detail::RootedObjectArray<Unity::Object>::from_managed_array(
-                entries, "UdonBehaviour::ListProgramVariables");
-            if (!array) return out;
+            for (int guard = 0; guard < 4096; ++guard) {
+                if (!enumerator.Call<bool>("MoveNext")) break;
 
-            for (const Unity::Object &slot : array) {
-                if (!slot) continue; // a removed entry leaves a null slot behind
-
-                const Unity::Object variable = slot.GetField<Unity::Object>("value");
-                if (!variable) continue;
+                const Unity::Object current = enumerator.GetProperty<Unity::Object>("Current");
+                if (!current) continue;
+                const std::string name = URK::Unity::detail::managed_string_to_utf8(current.handle());
+                if (name.empty()) continue;
 
                 ProgramVariable entry;
-                // The dictionary key is authoritative: SymbolName is the same
-                // string but reading a property can invoke user code.
-                entry.name = slot.GetField<std::string>("key");
-                if (entry.name.empty())
-                    entry.name = variable.GetProperty<std::string>("SymbolName");
-                if (entry.name.empty()) continue;
+                entry.name = name;
 
-                const Unity::Object declared = variable.GetProperty<Unity::Object>("DeclaredType");
-                if (declared) entry.type_name = declared.GetProperty<std::string>("FullName");
+                // The table's own accessors, so the declared type and the value
+                // come from the same place the runtime reads them.
+                void *typeHandle = nullptr;
+                if (table.CallExact<bool>("TryGetVariableType", { "System.String", "System.Type&" },
+                                         name, &typeHandle)) {
+                    const Unity::Object type{ typeHandle };
+                    if (type) entry.type_name = type.GetProperty<std::string>("FullName");
+                }
 
-                entry.value = variable.GetProperty<Unity::Object>("Value");
+                void *valueHandle = nullptr;
+                if (table.CallExact<bool>("TryGetVariableValue", { "System.String", "System.Object&" },
+                                         name, &valueHandle)) {
+                    entry.value = Unity::Object{ valueHandle };
+                }
+
                 out.push_back(std::move(entry));
             }
             return out;
