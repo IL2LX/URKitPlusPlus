@@ -450,6 +450,8 @@ constexpr std::string_view kVrcGeneratedProbeSource = R"PROBE(
 #include "sdk/VRChat/VRC/Core/Logger.h"
 #include "sdk/VRChat/VRC/Core/ConfigManager.h"
 #include "sdk/VRChat/VRC/Core/VRCLogger.h"
+#include "sdk/VRChat/VRC/Udon/UdonBehaviour.h"
+#include "sdk/VRChat/VRC/SDK3/Props/Components/VRCPropDescriptor.h"
 
 #include <cstdint>
 #include <string>
@@ -540,6 +542,36 @@ void probe_vrc_generated() {
     Logger::AssignLoggerProvider(nullptr);
     ConfigManager::WorldConfigIDChange("id");
     ConfigManager::ClientConfigIDChange("id");
+
+    // A prop instance in a world is a UdonSharp script, so reading one goes
+    // through UdonBehaviour program variables. GetProgramVariable and
+    // TryGetProgramVariable each exist twice with identical name and arity, once
+    // generic and once not, which is the pair that used to make method lookup
+    // give up with an ambiguity error.
+    VRC::Udon::UdonBehaviour udon{nullptr};
+    void* raw = nullptr;
+    (void)udon.TryGetProgramVariable("propId", &raw);
+    (void)udon.GetProgramVariable("propId");
+    (void)udon.GetProgramVariableType("propId");
+    udon.SetProgramVariable("propId", nullptr);
+    (void)udon.HasError();
+    (void)udon.ProgramId();
+
+    // A prop instance is a UdonSharp script, so the descriptor that points at it
+    // and the program variables that hold its state are both on this path. The
+    // SDK3 descriptor keeps its VRC prefix in the C++ name because the managed
+    // name has no underscore to split on.
+    VRC::SDK3::Props::Components::VrcVRCPropDescriptor propDescriptor{nullptr};
+    float radius = 0.0f;
+    URK::Unity::Vector3 localPosition{};
+    (void)propDescriptor.selectorLocalPosition();
+    (void)propDescriptor.selectorRadius();
+    (void)propDescriptor.customAttributes();
+    (void)propDescriptor.previewBehaviour();
+    (void)propDescriptor.try_selectorLocalPosition(localPosition);
+    (void)propDescriptor.try_selectorRadius(radius);
+    propDescriptor.set_selectorRadius(radius);
+    (void)propDescriptor.try_set_selectorRadius(radius);
 }
 } // namespace
 )PROBE";

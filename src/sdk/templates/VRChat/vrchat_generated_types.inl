@@ -17728,7 +17728,7 @@ inline const VrcGenerated::TypeSpec kVrcAPI = {
 // VRC.Core.API2FA -> VRC::Core::VrcAPI2FA
 inline const VrcGenerated::TypeSpec kVrcAPI2FA = {
     "VrcAPI2FA", "VRC::Core", "VRCCore-Standalone.dll", "VRC.Core", "API2FA",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcAPI2FAFields, 4,
     kVrcAPI2FAProperties, 3,
@@ -17948,7 +17948,7 @@ inline const VrcGenerated::TypeSpec kVrcApiCampaignRewardProgression = {
 // VRC.Core.ApiCertificateVerifier -> VRC::Core::VrcApiCertificateVerifier
 inline const VrcGenerated::TypeSpec kVrcApiCertificateVerifier = {
     "VrcApiCertificateVerifier", "VRC::Core", "VRCCore-Standalone.dll", "VRC.Core", "ApiCertificateVerifier",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcApiCertificateVerifierFields, 1,
     nullptr, 0,
@@ -17968,7 +17968,7 @@ inline const VrcGenerated::TypeSpec kVrcApiContainer = {
 // VRC.Core.ApiCredentials -> VRC::Core::VrcApiCredentials
 inline const VrcGenerated::TypeSpec kVrcApiCredentials = {
     "VrcApiCredentials", "VRC::Core", "VRCCore-Standalone.dll", "VRC.Core", "ApiCredentials",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcApiCredentialsFields, 6,
     nullptr, 0,
@@ -17978,7 +17978,7 @@ inline const VrcGenerated::TypeSpec kVrcApiCredentials = {
 // VRC.Core.ApiDictContainer -> VRC::Core::VrcApiDictContainer
 inline const VrcGenerated::TypeSpec kVrcApiDictContainer = {
     "VrcApiDictContainer", "VRC::Core", "VRCCore-Standalone.dll", "VRC.Core", "ApiDictContainer",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     kVrcApiDictContainerProperties, 1,
@@ -18918,7 +18918,7 @@ inline const VrcGenerated::TypeSpec kVrcAssetVersion = {
 // VRC.Core.BaseConfig -> VRC::Core::VrcBaseConfig
 inline const VrcGenerated::TypeSpec kVrcBaseConfig = {
     "VrcBaseConfig", "VRC::Core", "VRCCore-Standalone.dll", "VRC.Core", "BaseConfig",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcBaseConfigFields, 2,
     nullptr, 0,
@@ -18928,7 +18928,7 @@ inline const VrcGenerated::TypeSpec kVrcBaseConfig = {
 // VRC.Core.Burst.DisposableJobHandle -> VRC::Core::Burst::VrcDisposableJobHandle
 inline const VrcGenerated::TypeSpec kVrcDisposableJobHandle = {
     "VrcDisposableJobHandle", "VRC::Core::Burst", "VRCSDKBase.dll", "VRC.Core.Burst", "DisposableJobHandle",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     kVrcDisposableJobHandleProperties, 1,
@@ -19078,7 +19078,7 @@ inline const VrcGenerated::TypeSpec kVrcFavoriteTypeExtensions = {
 // VRC.Core.GroupInstanceAccessType -> VRC::Core::VrcGroupInstanceAccessType
 inline const VrcGenerated::TypeSpec kVrcGroupInstanceAccessType = {
     "VrcGroupInstanceAccessType", "VRC::Core", "VRCCore-Standalone.dll", "VRC.Core", "GroupInstanceAccessType",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcGroupInstanceAccessTypeFields, 3,
     nullptr, 0,
@@ -19118,7 +19118,7 @@ inline const VrcGenerated::TypeSpec kVrcInstanceAccessType = {
 // VRC.Core.InstanceAccessTypeExtensions -> VRC::Core::VrcInstanceAccessTypeExtensions
 inline const VrcGenerated::TypeSpec kVrcInstanceAccessTypeExtensions = {
     "VrcInstanceAccessTypeExtensions", "VRC::Core", "VRCCore-Standalone.dll", "VRC.Core", "InstanceAccessTypeExtensions",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcInstanceAccessTypeExtensionsFields, 18,
     nullptr, 0,
@@ -19198,7 +19198,7 @@ inline const VrcGenerated::TypeSpec kVrcPersistenceObjectStateManager = {
 // VRC.Core.Networking.Codec.StateManagement.SimpleObjectStateManager -> VRC::Core::Networking::Codec::StateManagement::VrcSimpleObjectStateManager
 inline const VrcGenerated::TypeSpec kVrcSimpleObjectStateManager = {
     "VrcSimpleObjectStateManager", "VRC::Core::Networking::Codec::StateManagement", "VRC.Core.Networking.dll", "VRC.Core.Networking.Codec.StateManagement", "SimpleObjectStateManager",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcSimpleObjectStateManagerFields, 3,
     kVrcSimpleObjectStateManagerProperties, 1,
@@ -19258,7 +19258,7 @@ inline const VrcGenerated::TypeSpec kVrcFlatBufferConfig = {
 // VRC.Core.Networking.FlatBufferSerializerCodec -> VRC::Core::Networking::VrcFlatBufferSerializerCodec
 inline const VrcGenerated::TypeSpec kVrcFlatBufferSerializerCodec = {
     "VrcFlatBufferSerializerCodec", "VRC::Core::Networking", "VRC.Core.Networking.dll", "VRC.Core.Networking", "FlatBufferSerializerCodec",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcFlatBufferSerializerCodecFields, 8,
     kVrcFlatBufferSerializerCodecProperties, 1,
@@ -19278,7 +19278,7 @@ inline const VrcGenerated::TypeSpec kVrcIEvent = {
 // VRC.Core.Networking.IFlatBufferNetworkSerializer -> VRC::Core::Networking::VrcIFlatBufferNetworkSerializer
 inline const VrcGenerated::TypeSpec kVrcIFlatBufferNetworkSerializer = {
     "VrcIFlatBufferNetworkSerializer", "VRC::Core::Networking", "VRC.Core.Networking.dll", "VRC.Core.Networking", "IFlatBufferNetworkSerializer",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcIFlatBufferNetworkSerializerFields, 2,
     kVrcIFlatBufferNetworkSerializerProperties, 6,
@@ -19358,7 +19358,7 @@ inline const VrcGenerated::TypeSpec kVrcIVRC_PersistentSerializer = {
 // VRC.Core.Networking.NetworkUpdateRates -> VRC::Core::Networking::VrcNetworkUpdateRates
 inline const VrcGenerated::TypeSpec kVrcNetworkUpdateRates = {
     "VrcNetworkUpdateRates", "VRC::Core::Networking", "VRC.Core.Networking.dll", "VRC.Core.Networking", "NetworkUpdateRates",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcNetworkUpdateRatesFields, 5,
     nullptr, 0,
@@ -19368,7 +19368,7 @@ inline const VrcGenerated::TypeSpec kVrcNetworkUpdateRates = {
 // VRC.Core.Networking.NumericExtensions -> VRC::Core::Networking::VrcNumericExtensions
 inline const VrcGenerated::TypeSpec kVrcNumericExtensions = {
     "VrcNumericExtensions", "VRC::Core::Networking", "VRC.Core.Networking.dll", "VRC.Core.Networking", "NumericExtensions",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcNumericExtensionsFields, 4,
     nullptr, 0,
@@ -19378,7 +19378,7 @@ inline const VrcGenerated::TypeSpec kVrcNumericExtensions = {
 // VRC.Core.Networking.Pose.Configuration -> VRC::Core::Networking::Pose::VrcConfiguration
 inline const VrcGenerated::TypeSpec kVrcConfiguration = {
     "VrcConfiguration", "VRC::Core::Networking::Pose", "VRC.Core.Networking.dll", "VRC.Core.Networking.Pose", "Configuration",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcConfigurationFields, 7,
     nullptr, 0,
@@ -19458,7 +19458,7 @@ inline const VrcGenerated::TypeSpec kVrcQuantizedSerialization = {
 // VRC.Core.Networking.RoomNetworkProperty -> VRC::Core::Networking::VrcRoomNetworkProperty
 inline const VrcGenerated::TypeSpec kVrcRoomNetworkProperty = {
     "VrcRoomNetworkProperty", "VRC::Core::Networking", "VRC.Core.Networking.dll", "VRC.Core.Networking", "RoomNetworkProperty",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcRoomNetworkPropertyFields, 6,
     nullptr, 0,
@@ -19468,7 +19468,7 @@ inline const VrcGenerated::TypeSpec kVrcRoomNetworkProperty = {
 // VRC.Core.Networking.TimeProxy -> VRC::Core::Networking::VrcTimeProxy
 inline const VrcGenerated::TypeSpec kVrcTimeProxy = {
     "VrcTimeProxy", "VRC::Core::Networking", "VRC.Core.Networking.dll", "VRC.Core.Networking", "TimeProxy",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     kVrcTimeProxyProperties, 8,
@@ -19488,7 +19488,7 @@ inline const VrcGenerated::TypeSpec kVrcBitConverterSpan = {
 // VRC.Core.Networking.Tools.BunchCollection -> VRC::Core::Networking::Tools::VrcBunchCollection
 inline const VrcGenerated::TypeSpec kVrcBunchCollection = {
     "VrcBunchCollection", "VRC::Core::Networking::Tools", "VRC.Core.Networking.dll", "VRC.Core.Networking.Tools", "BunchCollection",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     kVrcBunchCollectionProperties, 3,
@@ -19538,7 +19538,7 @@ inline const VrcGenerated::TypeSpec kVrcAnimatorEvent = {
 // VRC.Core.Networking.Tween.TweenFunctions -> VRC::Core::Networking::Tween::VrcTweenFunctions
 inline const VrcGenerated::TypeSpec kVrcTweenFunctions = {
     "VrcTweenFunctions", "VRC::Core::Networking::Tween", "VRC.Core.Networking.dll", "VRC.Core.Networking.Tween", "TweenFunctions",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcTweenFunctionsFields, 1,
     nullptr, 0,
@@ -19558,7 +19558,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCNetworkBehaviourTypeId = {
 // VRC.Core.Networking.VRCPhotonEvent -> VRC::Core::Networking::VrcVRCPhotonEvent
 inline const VrcGenerated::TypeSpec kVrcVRCPhotonEvent = {
     "VrcVRCPhotonEvent", "VRC::Core::Networking", "VRC.Core.Networking.dll", "VRC.Core.Networking", "VRCPhotonEvent",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcVRCPhotonEventFields, 51,
     nullptr, 0,
@@ -19578,7 +19578,7 @@ inline const VrcGenerated::TypeSpec kVrcNetworkRegion = {
 // VRC.Core.NetworkRegionExtensions -> VRC::Core::VrcNetworkRegionExtensions
 inline const VrcGenerated::TypeSpec kVrcNetworkRegionExtensions = {
     "VrcNetworkRegionExtensions", "VRC::Core", "VRCCore-Standalone.dll", "VRC.Core", "NetworkRegionExtensions",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcNetworkRegionExtensionsFields, 20,
     nullptr, 0,
@@ -19798,7 +19798,7 @@ inline const VrcGenerated::TypeSpec kVrcUpdateDelegator = {
 // VRC.Core.UrlAllowlistConfig -> VRC::Core::VrcUrlAllowlistConfig
 inline const VrcGenerated::TypeSpec kVrcUrlAllowlistConfig = {
     "VrcUrlAllowlistConfig", "VRC::Core", "VRCCore-Standalone.dll", "VRC.Core", "UrlAllowlistConfig",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     kVrcUrlAllowlistConfigProperties, 2,
@@ -19818,7 +19818,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCEvent = {
 // VRC.Core.VRChatTestProtocol -> VRC::Core::VrcVRChatTestProtocol
 inline const VrcGenerated::TypeSpec kVrcVRChatTestProtocol = {
     "VrcVRChatTestProtocol", "VRC::Core", "VRCCore-Standalone.dll", "VRC.Core", "VRChatTestProtocol",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcVRChatTestProtocolFields, 4,
     nullptr, 0,
@@ -19838,7 +19838,7 @@ inline const VrcGenerated::TypeSpec kVrcVTP_PacketID = {
 // VRC.Core.ZLoggerHandlerLogger -> VRC::Core::VrcZLoggerHandlerLogger
 inline const VrcGenerated::TypeSpec kVrcZLoggerHandlerLogger = {
     "VrcZLoggerHandlerLogger", "VRC::Core", "VRC.Logging.dll", "VRC.Core", "ZLoggerHandlerLogger",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -19848,7 +19848,7 @@ inline const VrcGenerated::TypeSpec kVrcZLoggerHandlerLogger = {
 // VRC.Dynamics.AimVRCConstraintBinding -> VRC::Dynamics::VrcAimVRCConstraintBinding
 inline const VrcGenerated::TypeSpec kVrcAimVRCConstraintBinding = {
     "VrcAimVRCConstraintBinding", "VRC::Dynamics", "VRC.Dynamics.dll", "VRC.Dynamics", "AimVRCConstraintBinding",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -19888,7 +19888,7 @@ inline const VrcGenerated::TypeSpec kVrcChainBuffer = {
 // VRC.Dynamics.ChainId -> VRC::Dynamics::VrcChainId
 inline const VrcGenerated::TypeSpec kVrcChainId = {
     "VrcChainId", "VRC::Dynamics", "VRC.Dynamics.dll", "VRC.Dynamics", "ChainId",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcChainIdFields, 1,
     nullptr, 0,
@@ -19938,7 +19938,7 @@ inline const VrcGenerated::TypeSpec kVrcCollisionShapes = {
 // VRC.Dynamics.ContactBase -> VRC::Dynamics::VrcContactBase
 inline const VrcGenerated::TypeSpec kVrcContactBase = {
     "VrcContactBase", "VRC::Dynamics", "VRC.Dynamics.dll", "VRC.Dynamics", "ContactBase",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcContactBaseFields, 18,
     kVrcContactBaseProperties, 1,
@@ -19968,7 +19968,7 @@ inline const VrcGenerated::TypeSpec kVrcContactExitInfo = {
 // VRC.Dynamics.ContactManager -> VRC::Dynamics::VrcContactManager
 inline const VrcGenerated::TypeSpec kVrcContactManager = {
     "VrcContactManager", "VRC::Dynamics", "VRC.Dynamics.dll", "VRC.Dynamics", "ContactManager",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcContactManagerFields, 14,
     nullptr, 0,
@@ -20398,7 +20398,7 @@ inline const VrcGenerated::TypeSpec kVrcScaleVRCConstraintBinding = {
 // VRC.Dynamics.VRCConstraintBase -> VRC::Dynamics::VrcVRCConstraintBase
 inline const VrcGenerated::TypeSpec kVrcVRCConstraintBase = {
     "VrcVRCConstraintBase", "VRC::Dynamics", "VRC.Dynamics.dll", "VRC.Dynamics", "VRCConstraintBase",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcVRCConstraintBaseFields, 23,
     kVrcVRCConstraintBaseProperties, 2,
@@ -20418,7 +20418,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCConstraintGroup = {
 // VRC.Dynamics.VRCConstraintGrouper -> VRC::Dynamics::VrcVRCConstraintGrouper
 inline const VrcGenerated::TypeSpec kVrcVRCConstraintGrouper = {
     "VrcVRCConstraintGrouper", "VRC::Dynamics", "VRC.Dynamics.dll", "VRC.Dynamics", "VRCConstraintGrouper",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcVRCConstraintGrouperFields, 2,
     nullptr, 0,
@@ -20428,7 +20428,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCConstraintGrouper = {
 // VRC.Dynamics.VRCConstraintJob -> VRC::Dynamics::VrcVRCConstraintJob
 inline const VrcGenerated::TypeSpec kVrcVRCConstraintJob = {
     "VrcVRCConstraintJob", "VRC::Dynamics", "VRC.Dynamics.dll", "VRC.Dynamics", "VRCConstraintJob",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcVRCConstraintJobFields, 2,
     nullptr, 0,
@@ -20538,7 +20538,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCConstraintSynchronizeResult = {
 // VRC.Dynamics.VRCDynamicsScheduler -> VRC::Dynamics::VrcVRCDynamicsScheduler
 inline const VrcGenerated::TypeSpec kVrcVRCDynamicsScheduler = {
     "VrcVRCDynamicsScheduler", "VRC::Dynamics", "VRC.Dynamics.dll", "VRC.Dynamics", "VRCDynamicsScheduler",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -20558,7 +20558,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCPhysBoneBase = {
 // VRC.Dynamics.VRCPhysBoneColliderBase -> VRC::Dynamics::VrcVRCPhysBoneColliderBase
 inline const VrcGenerated::TypeSpec kVrcVRCPhysBoneColliderBase = {
     "VrcVRCPhysBoneColliderBase", "VRC::Dynamics", "VRC.Dynamics.dll", "VRC.Dynamics", "VRCPhysBoneColliderBase",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcVRCPhysBoneColliderBaseFields, 10,
     kVrcVRCPhysBoneColliderBaseProperties, 5,
@@ -20578,7 +20578,7 @@ inline const VrcGenerated::TypeSpec kVrcIProduct = {
 // VRC.Economy.Store -> VRC::Economy::VrcStore
 inline const VrcGenerated::TypeSpec kVrcStore = {
     "VrcStore", "VRC::Economy", "VRCEconomy.dll", "VRC.Economy", "Store",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -20648,7 +20648,7 @@ inline const VrcGenerated::TypeSpec kVrcInventoryEffectDescription = {
 // VRC.InventoryEffects.InventoryEffectDescriptionKeys -> VRC::InventoryEffects::VrcInventoryEffectDescriptionKeys
 inline const VrcGenerated::TypeSpec kVrcInventoryEffectDescriptionKeys = {
     "VrcInventoryEffectDescriptionKeys", "VRC::InventoryEffects", "VRC.InventoryEffects.dll", "VRC.InventoryEffects", "InventoryEffectDescriptionKeys",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcInventoryEffectDescriptionKeysFields, 5,
     nullptr, 0,
@@ -20708,7 +20708,7 @@ inline const VrcGenerated::TypeSpec kVrcLocalizableString = {
 // VRC.Localization.LocalizableStringFormatter -> VRC::Localization::VrcLocalizableStringFormatter
 inline const VrcGenerated::TypeSpec kVrcLocalizableStringFormatter = {
     "VrcLocalizableStringFormatter", "VRC::Localization", "Localization.StringFormatting.dll", "VRC.Localization", "LocalizableStringFormatter",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -20908,7 +20908,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCObjectPool = {
 // VRC.SDK3.Components.VRCObjectSync -> VRC::SDK3::Components::VrcVRCObjectSync
 inline const VrcGenerated::TypeSpec kVrcVRCObjectSync = {
     "VrcVRCObjectSync", "VRC::SDK3::Components", "VRCSDK3.dll", "VRC.SDK3.Components", "VRCObjectSync",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcVRCObjectSyncFields, 3,
     nullptr, 0,
@@ -20918,7 +20918,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCObjectSync = {
 // VRC.SDK3.Components.VRCOpenMenu -> VRC::SDK3::Components::VrcVRCOpenMenu
 inline const VrcGenerated::TypeSpec kVrcVRCOpenMenu = {
     "VrcVRCOpenMenu", "VRC::SDK3::Components", "VRCSDK3.dll", "VRC.SDK3.Components", "VRCOpenMenu",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -20928,7 +20928,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCOpenMenu = {
 // VRC.SDK3.Components.VRCPlayerObject -> VRC::SDK3::Components::VrcVRCPlayerObject
 inline const VrcGenerated::TypeSpec kVrcVRCPlayerObject = {
     "VrcVRCPlayerObject", "VRC::SDK3::Components", "VRCSDK3.dll", "VRC.SDK3.Components", "VRCPlayerObject",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -20948,7 +20948,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCPortalMarker = {
 // VRC.SDK3.Components.VRCSceneDescriptor -> VRC::SDK3::Components::VrcVRCSceneDescriptor
 inline const VrcGenerated::TypeSpec kVrcVRCSceneDescriptor = {
     "VrcVRCSceneDescriptor", "VRC::SDK3::Components", "VRCSDK3.dll", "VRC.SDK3.Components", "VRCSceneDescriptor",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcVRCSceneDescriptorFields, 1,
     nullptr, 0,
@@ -21128,7 +21128,7 @@ inline const VrcGenerated::TypeSpec kVrcTokenType = {
 // VRC.SDK3.Data.VRCJson -> VRC::SDK3::Data::VrcVRCJson
 inline const VrcGenerated::TypeSpec kVrcVRCJson = {
     "VrcVRCJson", "VRC::SDK3::Data", "VRCSDK3.dll", "VRC.SDK3.Data", "VRCJson",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcVRCJsonFields, 1,
     nullptr, 0,
@@ -21258,7 +21258,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCImageDownloadState = {
 // VRC.SDK3.Network.Stats -> VRC::SDK3::Network::VrcStats
 inline const VrcGenerated::TypeSpec kVrcStats = {
     "VrcStats", "VRC::SDK3::Network", "VRCSDK3.dll", "VRC.SDK3.Network", "Stats",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     kVrcStatsProperties, 10,
@@ -21268,7 +21268,7 @@ inline const VrcGenerated::TypeSpec kVrcStats = {
 // VRC.SDK3.Network.VRCNetworkBehaviour -> VRC::SDK3::Network::VrcVRCNetworkBehaviour
 inline const VrcGenerated::TypeSpec kVrcVRCNetworkBehaviour = {
     "VrcVRCNetworkBehaviour", "VRC::SDK3::Network", "VRCSDK3.dll", "VRC.SDK3.Network", "VRCNetworkBehaviour",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -21418,7 +21418,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCCameraMode = {
 // VRC.SDK3.Rendering.VRCCameraSettings -> VRC::SDK3::Rendering::VrcVRCCameraSettings
 inline const VrcGenerated::TypeSpec kVrcVRCCameraSettings = {
     "VrcVRCCameraSettings", "VRC::SDK3::Rendering", "VRCSDK3.dll", "VRC.SDK3.Rendering", "VRCCameraSettings",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcVRCCameraSettingsFields, 3,
     kVrcVRCCameraSettingsProperties, 22,
@@ -21428,7 +21428,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCCameraSettings = {
 // VRC.SDK3.Rendering.VRCQualitySettings -> VRC::SDK3::Rendering::VrcVRCQualitySettings
 inline const VrcGenerated::TypeSpec kVrcVRCQualitySettings = {
     "VrcVRCQualitySettings", "VRC::SDK3::Rendering", "VRCSDK3.dll", "VRC.SDK3.Rendering", "VRCQualitySettings",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     kVrcVRCQualitySettingsProperties, 9,
@@ -21468,7 +21468,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCStringDownload = {
 // VRC.SDK3.StringLoading.VRCStringDownloader -> VRC::SDK3::StringLoading::VrcVRCStringDownloader
 inline const VrcGenerated::TypeSpec kVrcVRCStringDownloader = {
     "VrcVRCStringDownloader", "VRC::SDK3::StringLoading", "VRCSDK3.dll", "VRC.SDK3.StringLoading", "VRCStringDownloader",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -21508,7 +21508,7 @@ inline const VrcGenerated::TypeSpec kVrcNetworkCallableAttribute = {
 // VRC.SDK3.UdonNetworkCalling.NetworkCalling -> VRC::SDK3::UdonNetworkCalling::VrcNetworkCalling
 inline const VrcGenerated::TypeSpec kVrcNetworkCalling = {
     "VrcNetworkCalling", "VRC::SDK3::UdonNetworkCalling", "VRCSDK3.dll", "VRC.SDK3.UdonNetworkCalling", "NetworkCalling",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     kVrcNetworkCallingProperties, 2,
@@ -21658,7 +21658,7 @@ inline const VrcGenerated::TypeSpec kVrcINetworkIDContainer = {
 // VRC.SDKBase.InputManager -> VRC::SDKBase::VrcInputManager
 inline const VrcGenerated::TypeSpec kVrcInputManager = {
     "VrcInputManager", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "InputManager",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -21728,7 +21728,7 @@ inline const VrcGenerated::TypeSpec kVrcIVRCInteractable = {
 // VRC.SDKBase.Utilities -> VRC::SDKBase::VrcUtilities
 inline const VrcGenerated::TypeSpec kVrcUtilities = {
     "VrcUtilities", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "Utilities",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -21738,7 +21738,7 @@ inline const VrcGenerated::TypeSpec kVrcUtilities = {
 // VRC.SDKBase.VersionHelper -> VRC::SDKBase::VrcVersionHelper
 inline const VrcGenerated::TypeSpec kVrcVersionHelper = {
     "VrcVersionHelper", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VersionHelper",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -21748,7 +21748,7 @@ inline const VrcGenerated::TypeSpec kVrcVersionHelper = {
 // VRC.SDKBase.VRC_AnimatorLayerControl -> VRC::SDKBase::VrcAnimatorLayerControl
 inline const VrcGenerated::TypeSpec kVrcAnimatorLayerControl = {
     "VrcAnimatorLayerControl", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_AnimatorLayerControl",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcAnimatorLayerControlFields, 4,
     nullptr, 0,
@@ -21758,7 +21758,7 @@ inline const VrcGenerated::TypeSpec kVrcAnimatorLayerControl = {
 // VRC.SDKBase.VRC_AnimatorLocomotionControl -> VRC::SDKBase::VrcAnimatorLocomotionControl
 inline const VrcGenerated::TypeSpec kVrcAnimatorLocomotionControl = {
     "VrcAnimatorLocomotionControl", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_AnimatorLocomotionControl",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcAnimatorLocomotionControlFields, 2,
     nullptr, 0,
@@ -21768,7 +21768,7 @@ inline const VrcGenerated::TypeSpec kVrcAnimatorLocomotionControl = {
 // VRC.SDKBase.VRC_AnimatorPlayAudio -> VRC::SDKBase::VrcAnimatorPlayAudio
 inline const VrcGenerated::TypeSpec kVrcAnimatorPlayAudio = {
     "VrcAnimatorPlayAudio", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_AnimatorPlayAudio",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcAnimatorPlayAudioFields, 14,
     kVrcAnimatorPlayAudioProperties, 4,
@@ -21778,7 +21778,7 @@ inline const VrcGenerated::TypeSpec kVrcAnimatorPlayAudio = {
 // VRC.SDKBase.VRC_AnimatorTemporaryPoseSpace -> VRC::SDKBase::VrcAnimatorTemporaryPoseSpace
 inline const VrcGenerated::TypeSpec kVrcAnimatorTemporaryPoseSpace = {
     "VrcAnimatorTemporaryPoseSpace", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_AnimatorTemporaryPoseSpace",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcAnimatorTemporaryPoseSpaceFields, 6,
     nullptr, 0,
@@ -21788,7 +21788,7 @@ inline const VrcGenerated::TypeSpec kVrcAnimatorTemporaryPoseSpace = {
 // VRC.SDKBase.VRC_AnimatorTrackingControl -> VRC::SDKBase::VrcAnimatorTrackingControl
 inline const VrcGenerated::TypeSpec kVrcAnimatorTrackingControl = {
     "VrcAnimatorTrackingControl", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_AnimatorTrackingControl",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcAnimatorTrackingControlFields, 1,
     nullptr, 0,
@@ -21818,7 +21818,7 @@ inline const VrcGenerated::TypeSpec kVrcAvatarParameterDriver = {
 // VRC.SDKBase.VRC_DataStorage -> VRC::SDKBase::VrcDataStorage
 inline const VrcGenerated::TypeSpec kVrcDataStorage = {
     "VrcDataStorage", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_DataStorage",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcDataStorageFields, 9,
     nullptr, 0,
@@ -21878,7 +21878,7 @@ inline const VrcGenerated::TypeSpec kVrcGunStats = {
 // VRC.SDKBase.VRC_IKFollower -> VRC::SDKBase::VrcIKFollower
 inline const VrcGenerated::TypeSpec kVrcIKFollower = {
     "VrcIKFollower", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_IKFollower",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -21888,7 +21888,7 @@ inline const VrcGenerated::TypeSpec kVrcIKFollower = {
 // VRC.SDKBase.VRC_Interactable -> VRC::SDKBase::VrcInteractable
 inline const VrcGenerated::TypeSpec kVrcInteractable = {
     "VrcInteractable", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_Interactable",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcInteractableFields, 3,
     kVrcInteractableProperties, 3,
@@ -21898,7 +21898,7 @@ inline const VrcGenerated::TypeSpec kVrcInteractable = {
 // VRC.SDKBase.VRC_KeyEvents -> VRC::SDKBase::VrcKeyEvents
 inline const VrcGenerated::TypeSpec kVrcKeyEvents = {
     "VrcKeyEvents", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_KeyEvents",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcKeyEventsFields, 4,
     nullptr, 0,
@@ -21918,7 +21918,7 @@ inline const VrcGenerated::TypeSpec kVrcLabel = {
 // VRC.SDKBase.VRC_MetadataListener -> VRC::SDKBase::VrcMetadataListener
 inline const VrcGenerated::TypeSpec kVrcMetadataListener = {
     "VrcMetadataListener", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_MetadataListener",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     nullptr, 0,
     kVrcMetadataListenerProperties, 1,
@@ -21928,7 +21928,7 @@ inline const VrcGenerated::TypeSpec kVrcMetadataListener = {
 // VRC.SDKBase.VRC_MidiNoteIn -> VRC::SDKBase::VrcMidiNoteIn
 inline const VrcGenerated::TypeSpec kVrcMidiNoteIn = {
     "VrcMidiNoteIn", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_MidiNoteIn",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -21948,7 +21948,7 @@ inline const VrcGenerated::TypeSpec kVrcMirrorReflection = {
 // VRC.SDKBase.VRC_NpcApi -> VRC::SDKBase::VrcNpcApi
 inline const VrcGenerated::TypeSpec kVrcNpcApi = {
     "VrcNpcApi", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_NpcApi",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -21958,7 +21958,7 @@ inline const VrcGenerated::TypeSpec kVrcNpcApi = {
 // VRC.SDKBase.VRC_NPCSpawn -> VRC::SDKBase::VrcNPCSpawn
 inline const VrcGenerated::TypeSpec kVrcNPCSpawn = {
     "VrcNPCSpawn", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_NPCSpawn",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcNPCSpawnFields, 4,
     nullptr, 0,
@@ -21978,7 +21978,7 @@ inline const VrcGenerated::TypeSpec kVrcObjectApi = {
 // VRC.SDKBase.VRC_ObjectSpawn -> VRC::SDKBase::VrcObjectSpawn
 inline const VrcGenerated::TypeSpec kVrcObjectSpawn = {
     "VrcObjectSpawn", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_ObjectSpawn",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcObjectSpawnFields, 1,
     nullptr, 0,
@@ -21988,7 +21988,7 @@ inline const VrcGenerated::TypeSpec kVrcObjectSpawn = {
 // VRC.SDKBase.VRC_OscButtonIn -> VRC::SDKBase::VrcOscButtonIn
 inline const VrcGenerated::TypeSpec kVrcOscButtonIn = {
     "VrcOscButtonIn", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_OscButtonIn",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcOscButtonInFields, 1,
     nullptr, 0,
@@ -22018,7 +22018,7 @@ inline const VrcGenerated::TypeSpec kVrcPhysicsRoot = {
 // VRC.SDKBase.VRC_PlayableLayerControl -> VRC::SDKBase::VrcPlayableLayerControl
 inline const VrcGenerated::TypeSpec kVrcPlayableLayerControl = {
     "VrcPlayableLayerControl", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_PlayableLayerControl",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcPlayableLayerControlFields, 4,
     nullptr, 0,
@@ -22028,7 +22028,7 @@ inline const VrcGenerated::TypeSpec kVrcPlayableLayerControl = {
 // VRC.SDKBase.VRC_PortalMarker -> VRC::SDKBase::VrcPortalMarker
 inline const VrcGenerated::TypeSpec kVrcPortalMarker = {
     "VrcPortalMarker", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_PortalMarker",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcPortalMarkerFields, 10,
     nullptr, 0,
@@ -22058,7 +22058,7 @@ inline const VrcGenerated::TypeSpec kVrcPropController = {
 // VRC.SDKBase.VRC_PropDescriptor -> VRC::SDKBase::VrcPropDescriptor
 inline const VrcGenerated::TypeSpec kVrcPropDescriptor = {
     "VrcPropDescriptor", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_PropDescriptor",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcPropDescriptorFields, 7,
     kVrcPropDescriptorProperties, 2,
@@ -22108,7 +22108,7 @@ inline const VrcGenerated::TypeSpec kVrcTrigger = {
 // VRC.SDKBase.VRC_TriggerColliderEventTrigger -> VRC::SDKBase::VrcTriggerColliderEventTrigger
 inline const VrcGenerated::TypeSpec kVrcTriggerColliderEventTrigger = {
     "VrcTriggerColliderEventTrigger", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_TriggerColliderEventTrigger",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcTriggerColliderEventTriggerFields, 6,
     nullptr, 0,
@@ -22118,7 +22118,7 @@ inline const VrcGenerated::TypeSpec kVrcTriggerColliderEventTrigger = {
 // VRC.SDKBase.VRC_UiShape -> VRC::SDKBase::VrcUiShape
 inline const VrcGenerated::TypeSpec kVrcUiShape = {
     "VrcUiShape", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_UiShape",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcUiShapeFields, 1,
     nullptr, 0,
@@ -22128,7 +22128,7 @@ inline const VrcGenerated::TypeSpec kVrcUiShape = {
 // VRC.SDKBase.VRC_UseEvents -> VRC::SDKBase::VrcUseEvents
 inline const VrcGenerated::TypeSpec kVrcUseEvents = {
     "VrcUseEvents", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_UseEvents",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcUseEventsFields, 2,
     nullptr, 0,
@@ -22148,7 +22148,7 @@ inline const VrcGenerated::TypeSpec kVrcVisualDamage = {
 // VRC.SDKBase.VRC_Water -> VRC::SDKBase::VrcWater
 inline const VrcGenerated::TypeSpec kVrcWater = {
     "VrcWater", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_Water",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcWaterFields, 13,
     nullptr, 0,
@@ -22158,7 +22158,7 @@ inline const VrcGenerated::TypeSpec kVrcWater = {
 // VRC.SDKBase.VRC_WebPanel -> VRC::SDKBase::VrcWebPanel
 inline const VrcGenerated::TypeSpec kVrcWebPanel = {
     "VrcWebPanel", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRC_WebPanel",
-    false, false, true, false,
+    false, false, false, false,
     nullptr, 0,
     kVrcWebPanelFields, 18,
     nullptr, 0,
@@ -22188,7 +22188,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCDroneApi = {
 // VRC.SDKBase.VRCGraphics -> VRC::SDKBase::VrcVRCGraphics
 inline const VrcGenerated::TypeSpec kVrcVRCGraphics = {
     "VrcVRCGraphics", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRCGraphics",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     kVrcVRCGraphicsFields, 1,
     nullptr, 0,
@@ -22218,7 +22218,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCInputSetting = {
 // VRC.SDKBase.VRCRenderTexture -> VRC::SDKBase::VrcVRCRenderTexture
 inline const VrcGenerated::TypeSpec kVrcVRCRenderTexture = {
     "VrcVRCRenderTexture", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRCRenderTexture",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,
@@ -22228,7 +22228,7 @@ inline const VrcGenerated::TypeSpec kVrcVRCRenderTexture = {
 // VRC.SDKBase.VRCShader -> VRC::SDKBase::VrcVRCShader
 inline const VrcGenerated::TypeSpec kVrcVRCShader = {
     "VrcVRCShader", "VRC::SDKBase", "VRCSDKBase.dll", "VRC.SDKBase", "VRCShader",
-    false, false, true, false,
+    false, false, false, true,
     nullptr, 0,
     nullptr, 0,
     nullptr, 0,

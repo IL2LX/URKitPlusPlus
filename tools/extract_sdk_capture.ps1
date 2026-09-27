@@ -262,7 +262,9 @@ function Read-Type([string]$path, [string]$managed, [string]$imageFallback) {
         if ($classLine) {
             $line = $classLine.Line
             $isAbstract = $line -match '\babstract\b'
-            $isStatic   = $line -match '\bstatic\b'
+            # Anchored to the modifier run before `class`, so a base type or a
+            # member later on the same line cannot make a normal class look static.
+            $isStatic   = $line -match '^\s*public\s+(?:static\s+)?(?:sealed\s+|abstract\s+)*static\s+class\b'
             if ($line -match ':\s*([A-Za-z0-9_.]+)') { $parent = $Matches[1] }
         }
     }
@@ -302,7 +304,11 @@ function Read-Type([string]$path, [string]$managed, [string]$imageFallback) {
         $body = $body -replace '\bunsafe\b', ''
         $body = $body -replace '\b(abstract|virtual|override|sealed|new|readonly|const)\b', ''
         $body = $body.Trim()
-        $isStatic = $body -match '^static\s+'
+        # A per-member flag, deliberately not $isStatic: that one describes the
+        # class, and reusing it here let the last member parsed decide whether the
+        # type was emitted as a static class. VRC_PropDescriptor is a MonoBehaviour
+        # and was coming out as one.
+        $memberIsStatic = $body -match '^static\s+'
         $body = $body -replace '^static\s+', ''
 
         if ($body -match '^(?<ret>.+?)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\((?<args>.*)\)\s*(\{.*)?$') {
@@ -313,7 +319,7 @@ function Read-Type([string]$path, [string]$managed, [string]$imageFallback) {
             $key = "$name/$($Matches['args'])"
             if ($seenMethod[$key]) { continue }
             $seenMethod[$key] = $true
-            $methods += [ordered]@{ n = $name; pt = @(Split-Params $Matches['args'] $ns); rt = $ret; s = $isStatic }
+            $methods += [ordered]@{ n = $name; pt = @(Split-Params $Matches['args'] $ns); rt = $ret; s = $memberIsStatic }
             continue
         }
 
@@ -322,7 +328,7 @@ function Read-Type([string]$path, [string]$managed, [string]$imageFallback) {
             $type = Convert-Type $Matches['type'] $ns
             if ($null -eq $type) { continue }
             if ($name -match '^_') { continue }
-            $entry = [ordered]@{ n = $name; t = $type; s = $isStatic }
+            $entry = [ordered]@{ n = $name; t = $type; s = $memberIsStatic }
             if ($propNames.ContainsKey($name)) { $props += $entry } else { $fields += $entry }
         }
     }

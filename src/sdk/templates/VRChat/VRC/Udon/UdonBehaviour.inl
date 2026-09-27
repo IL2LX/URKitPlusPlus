@@ -213,9 +213,16 @@ namespace VRC::Udon
             return CallExact<bool>("TryGetProgramVariable", { "System.String", "System.Object&" }, symbolName, value);
         }
 
+        // A missing symbol and a present-but-null variable both yield a falsy
+        // Object, so the two are told apart through Unity::last_error() rather
+        // than left for the caller to guess at.
         Unity::Object GetProgramVariable(std::string_view symbolName) const {
             void* value = nullptr;
-            TryGetProgramVariable(symbolName, &value);
+            if (!TryGetProgramVariable(symbolName, &value)) {
+                URK::Unity::detail::set_error(std::string("UdonBehaviour has no program variable named ") +
+                                             std::string(symbolName));
+                return Unity::Object{ nullptr };
+            }
             return Unity::Object{ value };
         }
 
