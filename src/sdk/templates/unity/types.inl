@@ -1636,22 +1636,23 @@ struct Object {
     template <class T> static std::vector<T> FindAllInstances() {
         return FindObjectsOfTypeAll<T>();
     }
-    template <class T = Object> static T Instantiate(const T &original) {
+    template <class T = Object> static T Instantiate(const Object &original) {
         return T{detail::InvokeStatic<void *>(UnityObjectType, "Instantiate", original)};
     }
-    template <class T = Object> static T Instantiate(const T &original, const Transform &parent) {
+    template <class T = Object> static T Instantiate(const Object &original, const Transform &parent) {
         return T{detail::InvokeStatic<void *>(UnityObjectType, "Instantiate", original, parent)};
     }
     template <class T = Object>
-    static T Instantiate(const T &original, const Transform &parent, bool instantiateInWorldSpace) {
+    static T Instantiate(const Object &original, const Transform &parent, bool instantiateInWorldSpace) {
         return T{
             detail::InvokeStatic<void *>(UnityObjectType, "Instantiate", original, parent, instantiateInWorldSpace)};
     }
-    template <class T = Object> static T Instantiate(const T &original, Vector3 position, Quaternion rotation) {
+    template <class T = Object>
+    static T Instantiate(const Object &original, Vector3 position, Quaternion rotation) {
         return T{detail::InvokeStatic<void *>(UnityObjectType, "Instantiate", original, position, rotation)};
     }
     template <class T = Object>
-    static T Instantiate(const T &original, Vector3 position, Quaternion rotation, const Transform &parent) {
+    static T Instantiate(const Object &original, Vector3 position, Quaternion rotation, const Transform &parent) {
         return T{detail::InvokeStatic<void *>(UnityObjectType, "Instantiate", original, position, rotation, parent)};
     }
     static void Destroy(const Object &object) {
